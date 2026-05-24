@@ -427,15 +427,14 @@ impl ParsedPattern {
         }
 
         if let Some((op_name, inner_str, op_span)) = parse_operator_syntax_or_error(trimmed, current_offset)? {
-            let op_name_upper = op_name.to_uppercase();
-            if is_valid_op(&op_name_upper) {
+            if is_valid_op(&op_name) {
                 let inner_pattern = Self::parse_inner(
                     &inner_str,
                     current_offset + trimmed.find('(').unwrap() + 1,
                     is_valid_op
                 )?;
                 return Ok(ParsedPattern::Operator {
-                    name: op_name_upper,
+                    name: op_name,
                     inner: Box::new(inner_pattern),
                 });
             } else {
@@ -461,7 +460,7 @@ impl ParsedPattern {
 
 /// The operator trait for customizing query step transformations.
 pub trait GlobOperator<T> {
-    /// The uppercase operator name.
+    /// The operator name used for pattern matching.
     fn name(&self) -> &str;
 
     /// Modifies matching candidate elements in-place.
@@ -556,7 +555,7 @@ impl<'a, T> GlobberBuilder<'a, T> {
 
     /// Registers a custom pipeline operator.
     pub fn register_operator(&mut self, op: impl GlobOperator<T> + 'a) {
-        self.operators.insert(op.name().to_uppercase(), Box::new(op));
+        self.operators.insert(op.name().to_string(), Box::new(op));
     }
 
     /// Compiles a pattern string and validates that any nested operator name is registered.
