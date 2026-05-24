@@ -186,76 +186,146 @@ pub fn compile_pattern(pattern: &str) -> Result<Vec<MatchToken>, ParseError> {
     Ok(tokens)
 }
 
-/// Path-aware wildcard string matching algorithm.
+/// Matches `candidate` against compiled `tokens` using Nondeterministic Finite
+/// Automaton (NFA) simulation.
+///
+/// Maps each token to one NFA state; state `n` (= `tokens.len()`) is the sole
+/// accepting state:
+///
+/// ```text
+/// tokens:  [ T0  |  T1  |  T2  | ... | T(n-1) ]
+/// states:    0      1      2    ...    n-1       n = accept
+/// ```
+///
+/// A `Vec<bool>` (`active`) records all states simultaneously reachable given
+/// the candidate prefix consumed so far.  Each new character advances the
+/// simulation through two phases:
+///
+/// Phase 1 -- Consuming step.  For each active state i, fires the transition
+/// matching the current character c:
+///
+/// ```text
+/// Token              Condition        Adds to next
+/// -----------------  ---------------  ----------------
+/// Char(ch)           c == ch          i+1
+/// AnyChar            c not in {/,\}   i+1
+/// Set(s)             c in s           i+1
+/// AnySeqNoSeparator  c not in {/,\}   i  (self-loop)
+/// AnySeq             any c            i  (self-loop)
+/// ```
+///
+/// Wildcard self-loops keep state i active so the wildcard can consume further
+/// characters.  Advancement to i+1 (the zero-match case) follows in Phase 2.
+///
+/// Phase 2 -- Epsilon closure.  Propagates through zero-width transitions
+/// without consuming any character.  See [`epsilon_close`].
+///
+/// Complexity: O(n x m) time, O(n) space -- n = token count, m = candidate
+/// length.  The active-state set stays bounded by n+1, eliminating the
+/// exponential backtracking of naive recursive implementations.
 pub fn wildcard_match(tokens: &[MatchToken], candidate: &str) -> bool {
-    let candidate_chars: Vec<char> = candidate.chars().collect();
-    wildcard_match_recursive(tokens, &candidate_chars, 0, 0)
+    let n = tokens.len();
+
+    // Two fixed-size bit-vectors; allocate once and swap each iteration.
+    let mut active = alloc::vec![false; n + 1];
+    let mut next   = alloc::vec![false; n + 1];
+
+    active[0] = true;
+    epsilon_close(&mut active, tokens); // settle any leading zero-width tokens
+
+    for c in candidate.chars() {
+        // --- Phase 1: consuming step ---
+        next.fill(false);
+        for i in 0..n {
+            if !active[i] { continue; }
+            match &tokens[i] {
+                MatchToken::Char(ch) if c == *ch => {
+                    next[i + 1] = true;
+                }
+                MatchToken::AnyChar if c != '/' && c != '\\' => {
+                    next[i + 1] = true;
+                }
+                MatchToken::Set(set) if set.contains(&c) => {
+                    next[i + 1] = true;
+                }
+                // Self-loop: wildcard consumes c and stays at i, allowing
+                // further characters to match.  epsilon_close below adds
+                // i+1, covering the case where the wildcard matches nothing
+                // further after this character.
+                MatchToken::AnySeqNoSeparator if c != '/' && c != '\\' => {
+                    next[i] = true;
+                }
+                MatchToken::AnySeq => {
+                    next[i] = true; // ** self-loops on any character, including separators
+                }
+                _ => {}
+            }
+        }
+
+        // --- Phase 2: epsilon closure ---
+        epsilon_close(&mut next, tokens);
+        core::mem::swap(&mut active, &mut next);
+    }
+
+    active[n] // accept iff the end-of-pattern state is reachable
 }
 
 fn is_separator_token(tok: &MatchToken) -> bool {
     matches!(tok, MatchToken::Char('/') | MatchToken::Char('\\'))
 }
 
-fn wildcard_match_recursive(
-    tokens: &[MatchToken],
-    candidate: &[char],
-    t_idx: usize,
-    c_idx: usize,
-) -> bool {
-    if t_idx == tokens.len() {
-        return c_idx == candidate.len();
-    }
-
-    match &tokens[t_idx] {
-        MatchToken::Char(c) => {
-            if c_idx < candidate.len() && candidate[c_idx] == *c {
-                wildcard_match_recursive(tokens, candidate, t_idx + 1, c_idx + 1)
-            } else {
-                false
+/// Propagates epsilon (zero-width) transitions forward through `active`.
+///
+/// Only AnySeqNoSeparator and AnySeq carry epsilon transitions; every other
+/// token requires exactly one character to advance.
+///
+/// ```text
+/// AnySeqNoSeparator (*) at state i:
+///   i --eps--> i+1        (* matches zero characters)
+///
+/// AnySeq (**) at state i:
+///   i --eps--> i+1        (** matches zero characters)
+///   i --eps--> i+2        (only when tokens[i+1] is '/' or '\')
+/// ```
+///
+/// The second AnySeq epsilon -- the "separator skip" -- collapses ** and an
+/// adjacent pattern separator into zero path components.  This enables a
+/// pattern like "src/**/*.rs" to match "src/lib.rs" (zero sub-directories):
+///
+/// ```text
+/// Pattern fragment:  **   /   *      (states i, i+1, i+2)
+///
+///   i --eps--> i+1                   (standard: ** = zero chars)
+///   i --eps--> i+2                   (separator skip)
+///              ^
+///              ** absorbs tokens[i+1] = Char('/'),
+///              so the **/ pair matches zero path components
+/// ```
+///
+/// A single left-to-right pass handles all transitivity because every
+/// epsilon edge points strictly forward (i -> i+1 or i -> i+2).  Forward-only
+/// epsilon edges prevent any state from receiving a second visit, guaranteeing
+/// O(n) termination per call.
+fn epsilon_close(active: &mut [bool], tokens: &[MatchToken]) {
+    let n = tokens.len();
+    for i in 0..n {
+        if !active[i] { continue; }
+        match &tokens[i] {
+            MatchToken::AnySeqNoSeparator => {
+                active[i + 1] = true;
             }
-        }
-        MatchToken::AnyChar => {
-            if c_idx < candidate.len() && candidate[c_idx] != '/' && candidate[c_idx] != '\\' {
-                wildcard_match_recursive(tokens, candidate, t_idx + 1, c_idx + 1)
-            } else {
-                false
-            }
-        }
-        MatchToken::Set(set) => {
-            if c_idx < candidate.len() && set.contains(&candidate[c_idx]) {
-                wildcard_match_recursive(tokens, candidate, t_idx + 1, c_idx + 1)
-            } else {
-                false
-            }
-        }
-        MatchToken::AnySeq => {
-            // Option 1: ** matches zero directory components (collapsing a trailing slash in pattern)
-            if t_idx + 1 < tokens.len()
-                && is_separator_token(&tokens[t_idx + 1])
-                && wildcard_match_recursive(tokens, candidate, t_idx + 2, c_idx)
-            {
-                return true;
-            }
-
-            // Option 2: ** matches zero or more characters (including separators)
-            for len in 0..=(candidate.len() - c_idx) {
-                if wildcard_match_recursive(tokens, candidate, t_idx + 1, c_idx + len) {
-                    return true;
+            MatchToken::AnySeq => {
+                active[i + 1] = true;
+                // Separator skip: when the very next token is a literal path
+                // separator, also mark i+2 so that the ** + separator pair
+                // collapses to zero path components as a unit.
+                // Bounds: i+1 < n guarantees tokens[i+1] exists;
+                //         i+2 <= n guarantees active[i+2] is in-bounds.
+                if i + 1 < n && is_separator_token(&tokens[i + 1]) {
+                    active[i + 2] = true;
                 }
             }
-            false
-        }
-        MatchToken::AnySeqNoSeparator => {
-            // * matches zero or more characters except separators.
-            for len in 0..=(candidate.len() - c_idx) {
-                if len > 0 && (candidate[c_idx + len - 1] == '/' || candidate[c_idx + len - 1] == '\\') {
-                    break;
-                }
-                if wildcard_match_recursive(tokens, candidate, t_idx + 1, c_idx + len) {
-                    return true;
-                }
-            }
-            false
+            _ => {}
         }
     }
 }

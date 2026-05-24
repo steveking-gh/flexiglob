@@ -27,6 +27,10 @@ through an extensible operator registry.
 - **Lightweight & Portable**: Fully `#![no_std]` compatible, dependency-free,
   and suitable for bare-metal, embedded, WebAssembly, or standard application
   use.
+- **Well Bounded Execution**: Uses non-deterministic finite automata (NFA)
+  simulation for worst-case time Complexity O(n×m) where n is the token count
+  and m is the candidate string length. Worst-Case space complexity is O(n) to
+  store the NFA states.
 
 ---
 
