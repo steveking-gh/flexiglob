@@ -1,4 +1,4 @@
-use flexiglob::{FnOperator, GlobOperator, GlobberBuilder, ParsedPattern, ParseErrorKind};
+use flexiglob::{FnOperator, GlobOperator, GlobberBuilder, ParsedPattern, ParseErrorKind, ReverseOp};
 
 fn leaf(pat: &str) -> ParsedPattern {
     ParsedPattern::Leaf {
@@ -90,6 +90,7 @@ fn test_flexiglob_pipeline_integration() {
 #[test]
 fn test_flexiglob_nested_reverse() {
     let globber = GlobberBuilder::new()
+        .with_operator(ReverseOp)
         .with_operator(SortByNameOp)
         .compile("REVERSE(SORT(.text*))")
         .unwrap();
@@ -112,7 +113,9 @@ fn test_flexiglob_nested_reverse() {
 
 #[test]
 fn test_flexiglob_invalid_inputs() {
-    let builder = GlobberBuilder::new().with_operator(SortByNameOp);
+    let builder = GlobberBuilder::new()
+        .with_operator(ReverseOp)
+        .with_operator(SortByNameOp);
 
     // Invalid operator nested in REVERSE
     let err = builder.compile("REVERSE(UNKNOWN_OP(.text*))").unwrap_err();
@@ -233,6 +236,7 @@ fn test_empty_operator_pattern_fails() {
     assert!(matches!(err.kind, ParseErrorKind::EmptyPattern));
 
     let builder2 = GlobberBuilder::<TargetSection>::new()
+        .with_operator(ReverseOp)
         .with_operator(SortByNameOp);
     let err_nested = builder2.compile("REVERSE(SORT())").unwrap_err();
     assert!(matches!(err_nested.kind, ParseErrorKind::EmptyPattern));
@@ -256,6 +260,7 @@ impl GlobOperator<IntPayload> for SortIntsOp {
 #[test]
 fn test_no_string_payload_pipeline() {
     let globber = GlobberBuilder::new()
+        .with_operator(ReverseOp)
         .with_operator(SortIntsOp)
         .compile("REVERSE(SORT_INTS(*))")
         .unwrap();

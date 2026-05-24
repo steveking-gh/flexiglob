@@ -1,4 +1,4 @@
-use flexiglob::{GlobberBuilder, GlobOperator};
+use flexiglob::{GlobberBuilder, GlobOperator, ReverseOp};
 use ariadne::{Color, Label, Report, ReportKind, Source};
 
 struct SortOp;
@@ -26,6 +26,7 @@ fn print_diagnostic(pattern: &str, file_name: &str, error: &flexiglob::ParseErro
 fn main() {
     let file_name = "config.firmion";
     let builder = GlobberBuilder::<String>::new()
+        .with_operator(ReverseOp)
         .with_operator(SortOp);
 
     // Test Case 1: Mismatched parentheses
@@ -42,7 +43,7 @@ fn main() {
     {
         let pattern = "REVERSE(SORTR(.text*))";
         println!("--- Testing Pattern: '{}' ---", pattern);
-        let builder = GlobberBuilder::<String>::new().with_operator(SortOp);
+        let builder = GlobberBuilder::<String>::new().with_operator(ReverseOp).with_operator(SortOp);
         if let Err(e) = builder.compile(pattern) {
             print_diagnostic(pattern, file_name, &e);
         }
@@ -64,7 +65,7 @@ fn main() {
     {
         let pattern = "REVERSE(.text*)extra";
         println!("--- Testing Pattern: '{}' ---", pattern);
-        let builder = GlobberBuilder::<String>::new().with_operator(SortOp);
+        let builder = GlobberBuilder::<String>::new().with_operator(ReverseOp).with_operator(SortOp);
         if let Err(e) = builder.compile(pattern) {
             print_diagnostic(pattern, file_name, &e);
         }

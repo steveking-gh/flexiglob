@@ -428,17 +428,7 @@ impl ParsedPattern {
 
         if let Some((op_name, inner_str, op_span)) = parse_operator_syntax_or_error(trimmed, current_offset)? {
             let op_name_upper = op_name.to_uppercase();
-            if op_name_upper == "REVERSE" {
-                let inner_pattern = Self::parse_inner(
-                    &inner_str,
-                    current_offset + trimmed.find('(').unwrap() + 1,
-                    is_valid_op
-                )?;
-                return Ok(ParsedPattern::Operator {
-                    name: "REVERSE".to_string(),
-                    inner: Box::new(inner_pattern),
-                });
-            } else if is_valid_op(&op_name_upper) {
+            if is_valid_op(&op_name_upper) {
                 let inner_pattern = Self::parse_inner(
                     &inner_str,
                     current_offset + trimmed.find('(').unwrap() + 1,
@@ -476,6 +466,16 @@ pub trait GlobOperator<T> {
 
     /// Modifies matching candidate elements in-place.
     fn apply(&self, candidates: &mut Vec<T>);
+}
+
+/// A ready-to-use operator that reverses the matched candidate list.
+pub struct ReverseOp;
+
+impl<T> GlobOperator<T> for ReverseOp {
+    fn name(&self) -> &str { "REVERSE" }
+    fn apply(&self, candidates: &mut Vec<T>) {
+        candidates.reverse();
+    }
 }
 
 /// A generic closure-based operator wrapper.
@@ -635,12 +635,7 @@ impl<'a, T> Globber<'a, T> {
             }
             ParsedPattern::Operator { name, inner } => {
                 let mut matched = self.run_inner(inner, candidates, get_name, trace);
-                if name == "REVERSE" {
-                    matched.reverse();
-                    if let Some(t) = trace {
-                        t("Applied operator 'REVERSE'", &matched);
-                    }
-                } else if let Some(op) = self.operators.get(name) {
+                if let Some(op) = self.operators.get(name) {
                     op.apply(&mut matched);
                     if let Some(t) = trace {
                         t(&format!("Applied operator '{}'", name), &matched);
@@ -717,7 +712,7 @@ mod tests {
         let pat1 = ParsedPattern::parse(".text*", |_| false).unwrap();
         assert_eq!(pat1, leaf(".text*"));
 
-        let pat2 = ParsedPattern::parse("REVERSE(.text*)", |_| false).unwrap();
+        let pat2 = ParsedPattern::parse("REVERSE(.text*)", |op| op == "REVERSE").unwrap();
         assert_eq!(
             pat2,
             ParsedPattern::Operator {
@@ -729,7 +724,7 @@ mod tests {
 
     #[test]
     fn test_parser_nested() {
-        let pat = ParsedPattern::parse("REVERSE(SORT(.text*))", |op| op == "SORT").unwrap();
+        let pat = ParsedPattern::parse("REVERSE(SORT(.text*))", |op| op == "REVERSE" || op == "SORT").unwrap();
         assert_eq!(
             pat,
             ParsedPattern::Operator {
@@ -777,6 +772,7 @@ mod tests {
     #[test]
     fn test_pipeline_execution() {
         let globber = GlobberBuilder::new()
+            .with_operator(ReverseOp)
             .with_operator(SortValOp)
             .compile("REVERSE(SORT_VAL(item*))")
             .unwrap();
@@ -811,6 +807,7 @@ mod tests {
     #[test]
     fn test_fn_operator() {
         let globber = GlobberBuilder::new()
+            .with_operator(ReverseOp)
             .with_operator(FnOperator::new("SORT_VAL", |candidates: &mut Vec<Item>| {
                 candidates.sort_by_key(|c| c.val);
             }))

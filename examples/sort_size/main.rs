@@ -1,4 +1,4 @@
-use flexiglob::{FnOperator, GlobOperator, GlobberBuilder};
+use flexiglob::{FnOperator, GlobOperator, GlobberBuilder, ReverseOp};
 
 // Define the data structure to match against. While fully under user control,
 // this structure should have at least a string field. The closure passed to
@@ -52,6 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let pattern_str = "REVERSE(SORT_SIZE(.text*))";
         let globber = GlobberBuilder::new()
+            .with_operator(ReverseOp)
             .with_operator(SortBySize)
             .compile(pattern_str)?;
 
