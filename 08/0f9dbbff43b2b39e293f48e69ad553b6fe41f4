@@ -1,0 +1,29 @@
+src/lib.rs
+  h_5b3f31968f5853 55,172,174
+  s_406556d2a87011::t_9bfb66c2cf46a3 120,126
+  s_406556d2a87011::t_d4f12259dd6824 170-171,173,175-176
+tests/integration.rs
+  s_406556d2a87011::t_6996a1d7aa5e08 302-310,312-315,317-321,323-325
+  h_5b3f31968f5853 311,316,322
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.1",
+  "base_commit_sha": "080f9dbbff43b2b39e293f48e69ad553b6fe41f4",
+  "prompts": {},
+  "humans": {
+    "h_5b3f31968f5853": {
+      "author": "Steve King <12994437+steveking-gh@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_406556d2a87011": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "89dab3ac-ae3c-48be-b29b-98169c1cd0b7",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Steve King <12994437+steveking-gh@users.noreply.github.com>"
+    }
+  }
+}
