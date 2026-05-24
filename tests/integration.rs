@@ -299,6 +299,30 @@ fn test_inline_closure_operator_integration() {
     assert_eq!(res[1].value, 24);
 }
 
+// --- Empty bracket set ---
+
+#[test]
+fn test_empty_bracket_set_is_an_error() {
+    // [] can never match anything, so it is a compile-time error rather than a
+    // silent always-false token.
+
+    // Standalone: '[' at byte 0, ']' at byte 1, span covers both.
+    let err = flexiglob::compile_pattern("[]").unwrap_err();
+    assert!(matches!(err.kind, ParseErrorKind::EmptyBrackets));
+    assert_eq!(err.span, 0..2);
+
+    // Mid-pattern: "foo" = 3 bytes, so '[' at byte 3, ']' at byte 4.
+    let err2 = flexiglob::compile_pattern("foo[]bar").unwrap_err();
+    assert!(matches!(err2.kind, ParseErrorKind::EmptyBrackets));
+    assert_eq!(err2.span, 3..5);
+
+    // Byte-accurate span with a multi-byte prefix:
+    // 'ä' (U+00E4) = 2 bytes, so '[' at byte 2, ']' at byte 3.
+    let err3 = flexiglob::compile_pattern("ä[]").unwrap_err();
+    assert!(matches!(err3.kind, ParseErrorKind::EmptyBrackets));
+    assert_eq!(err3.span, 2..4);
+}
+
 // --- Multi-byte (Unicode) character tests ---
 
 #[test]

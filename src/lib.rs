@@ -52,6 +52,7 @@ pub enum ParseErrorKind {
     InvalidOperator(String),
     MismatchedParentheses,
     UnterminatedBracketSet,
+    EmptyBrackets,
     UnexpectedTrailingCharacters,
 }
 
@@ -116,11 +117,13 @@ pub fn compile_pattern(pattern: &str) -> Result<Vec<MatchToken>, ParseError> {
                 i += 1; // skip '['
                 let mut set = BTreeSet::new();
                 let mut closed = false;
+                let mut close_byte = 0;
 
                 while i < chars.len() {
                     let cur_ch = chars[i].1;
                     if cur_ch == ']' {
                         closed = true;
+                        close_byte = chars[i].0 + 1; // byte just past ']'
                         i += 1;
                         break;
                     }
@@ -162,6 +165,13 @@ pub fn compile_pattern(pattern: &str) -> Result<Vec<MatchToken>, ParseError> {
                         kind: ParseErrorKind::UnterminatedBracketSet,
                         span: start_byte..pattern.len(),
                         message: "Unterminated bracket set".to_string(),
+                    });
+                }
+                if set.is_empty() {
+                    return Err(ParseError {
+                        kind: ParseErrorKind::EmptyBrackets,
+                        span: start_byte..close_byte,
+                        message: "Empty brackets '[]' never match anything".to_string(),
                     });
                 }
                 tokens.push(MatchToken::Set(set));
