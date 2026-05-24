@@ -1,0 +1,21 @@
+src/lib.rs
+  s_406556d2a87011::t_e4158c4a3a1bc9 430,437
+  s_406556d2a87011::t_27926bf256b037 463
+  s_406556d2a87011::t_a771e5e2a1c882 558
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.1",
+  "base_commit_sha": "1aba0cf60cea7fee1a102e470e15c9abefbcfc19",
+  "prompts": {},
+  "sessions": {
+    "s_406556d2a87011": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "89dab3ac-ae3c-48be-b29b-98169c1cd0b7",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Steve King <12994437+steveking-gh@users.noreply.github.com>"
+    }
+  }
+}
