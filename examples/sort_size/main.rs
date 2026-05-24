@@ -51,10 +51,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // the sorted list to demonstrate operator nesting.
     {
         let pattern_str = "REVERSE(SORT_SIZE(.text*))";
-        let globber = GlobberBuilder::new()
+        let builder = GlobberBuilder::new()
             .with_operator(ReverseOp)
-            .with_operator(SortBySize)
-            .compile(pattern_str)?;
+            .with_operator(SortBySize);
+        let globber = builder.compile(pattern_str)?;
 
         println!("\nEvaluating pattern (Struct-based): {}", pattern_str);
         let results = globber.run(&candidates, |s| &s.name);
@@ -69,11 +69,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // allows registering custom operators inline without defining a new struct.
     {
         let pattern_str = "INLINE_SORT_SIZE(.text*)";
-        let globber = GlobberBuilder::new()
+        let builder = GlobberBuilder::new()
             .with_operator(FnOperator::new("INLINE_SORT_SIZE", |candidates: &mut Vec<Section>| {
                 candidates.sort_by_key(|s| s.size);
-            }))
-            .compile(pattern_str)?;
+            }));
+        let globber = builder.compile(pattern_str)?;
 
         println!("\nEvaluating pattern (Inline Closure-based): {}", pattern_str);
         let results = globber.run(&candidates, |s| &s.name);

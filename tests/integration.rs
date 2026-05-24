@@ -47,12 +47,11 @@ impl GlobOperator<TargetSection> for FilterMinSizeOp {
 
 #[test]
 fn test_flexiglob_pipeline_integration() {
-    let globber = GlobberBuilder::new()
+    let builder = GlobberBuilder::new()
         .with_operator(SortByNameOp)
         .with_operator(SortByAlignmentOp)
-        .with_operator(FilterMinSizeOp { min_size: 8 })
-        .compile("SORT_BY_ALIGNMENT(FILTER_MIN_SIZE(.text*))")
-        .unwrap();
+        .with_operator(FilterMinSizeOp { min_size: 8 });
+    let globber = builder.compile("SORT_BY_ALIGNMENT(FILTER_MIN_SIZE(.text*))").unwrap();
 
     let candidates = vec![
         TargetSection { file: "a.elf".to_string(), name: ".text.boot".to_string(), align: 4, size: 8 },
@@ -89,11 +88,10 @@ fn test_flexiglob_pipeline_integration() {
 
 #[test]
 fn test_flexiglob_nested_reverse() {
-    let globber = GlobberBuilder::new()
+    let builder = GlobberBuilder::new()
         .with_operator(ReverseOp)
-        .with_operator(SortByNameOp)
-        .compile("REVERSE(SORT(.text*))")
-        .unwrap();
+        .with_operator(SortByNameOp);
+    let globber = builder.compile("REVERSE(SORT(.text*))").unwrap();
 
     let candidates = vec![
         TargetSection { file: "a.elf".to_string(), name: ".text.a".to_string(), align: 4, size: 32 },
@@ -190,7 +188,8 @@ fn test_parser_edge_cases() {
 #[test]
 fn test_noop_and_default() {
     // Test default constructor
-    let globber = GlobberBuilder::default().compile(".text*").unwrap();
+    let builder = GlobberBuilder::default();
+    let globber = builder.compile(".text*").unwrap();
     let res = globber.run(&[".text".to_string()], |s| s);
     assert_eq!(res.len(), 1);
 
@@ -200,7 +199,8 @@ fn test_noop_and_default() {
 
 #[test]
 fn test_unregistered_but_valid_operator() {
-    let globber = GlobberBuilder::<String>::new().compile("SORT(.text*)");
+    let builder = GlobberBuilder::<String>::new();
+    let globber = builder.compile("SORT(.text*)");
     assert!(globber.is_err()); // since SORT is unregistered
 
     // But ParsedPattern itself can be parsed with a custom validator
@@ -216,7 +216,8 @@ fn test_unregistered_but_valid_operator() {
 
 #[test]
 fn test_recursive_glob_integration() {
-    let globber = GlobberBuilder::new().compile("src/**/*.rs").unwrap();
+    let builder = GlobberBuilder::new();
+    let globber = builder.compile("src/**/*.rs").unwrap();
     let candidates = vec![
         "src/lib.rs".to_string(),
         "src/parser/ast.rs".to_string(),
@@ -259,11 +260,10 @@ impl GlobOperator<IntPayload> for SortIntsOp {
 
 #[test]
 fn test_no_string_payload_pipeline() {
-    let globber = GlobberBuilder::new()
+    let builder = GlobberBuilder::new()
         .with_operator(ReverseOp)
-        .with_operator(SortIntsOp)
-        .compile("REVERSE(SORT_INTS(*))")
-        .unwrap();
+        .with_operator(SortIntsOp);
+    let globber = builder.compile("REVERSE(SORT_INTS(*))").unwrap();
 
     let candidates = vec![
         IntPayload { value: 30 },
@@ -284,14 +284,13 @@ fn test_no_string_payload_pipeline() {
 
 #[test]
 fn test_inline_closure_operator_integration() {
-    let globber = GlobberBuilder::new()
+    let builder = GlobberBuilder::new()
         .with_operator(FnOperator::new("DOUBLE_VALS", |candidates: &mut Vec<IntPayload>| {
             for c in candidates.iter_mut() {
                 c.value *= 2;
             }
-        }))
-        .compile("DOUBLE_VALS(*)")
-        .unwrap();
+        }));
+    let globber = builder.compile("DOUBLE_VALS(*)").unwrap();
 
     let candidates = vec![
         IntPayload { value: 5 },
@@ -393,10 +392,9 @@ fn test_multibyte_inner_pattern_not_truncated() {
     // offset, slicing trimmed[5..12] = "ä.text" — silently dropping the '*'.
     // The new code stores close_byte as byte offset 13, giving trimmed[5..13]
     // = "ä.text*" (correct).
-    let globber = GlobberBuilder::new()
-        .with_operator(SortByNameOp)
-        .compile("SORT(ä.text*)")
-        .unwrap();
+    let builder = GlobberBuilder::new()
+        .with_operator(SortByNameOp);
+    let globber = builder.compile("SORT(ä.text*)").unwrap();
 
     let candidates = vec![
         TargetSection { file: "a.elf".to_string(), name: "ä.text_init".to_string(), align: 4, size: 32 },

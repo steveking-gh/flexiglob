@@ -560,11 +560,11 @@ impl<'a, T> GlobberBuilder<'a, T> {
     }
 
     /// Compiles a pattern string and validates that any nested operator name is registered.
-    pub fn compile(self, pattern: &str) -> Result<Globber<'a, T>, ParseError> {
+    pub fn compile(&'a self, pattern: &str) -> Result<Globber<'a, T>, ParseError> {
         let parsed = ParsedPattern::parse(pattern, |op| self.operators.contains_key(op))?;
         Ok(Globber {
             pattern: parsed,
-            operators: self.operators,
+            operators: &self.operators,
         })
     }
 
@@ -573,7 +573,7 @@ impl<'a, T> GlobberBuilder<'a, T> {
 /// The compiled matching and operator execution engine.
 pub struct Globber<'a, T> {
     pattern: ParsedPattern,
-    operators: BTreeMap<String, Box<dyn GlobOperator<T> + 'a>>,
+    operators: &'a BTreeMap<String, Box<dyn GlobOperator<T> + 'a>>,
 }
 
 impl<'a, T> core::fmt::Debug for Globber<'a, T> {
@@ -771,11 +771,10 @@ mod tests {
 
     #[test]
     fn test_pipeline_execution() {
-        let globber = GlobberBuilder::new()
+        let builder = GlobberBuilder::new()
             .with_operator(ReverseOp)
-            .with_operator(SortValOp)
-            .compile("REVERSE(SORT_VAL(item*))")
-            .unwrap();
+            .with_operator(SortValOp);
+        let globber = builder.compile("REVERSE(SORT_VAL(item*))").unwrap();
 
         let candidates = vec![
             Item { name: "item1".to_string(), val: 30 },
@@ -806,13 +805,12 @@ mod tests {
 
     #[test]
     fn test_fn_operator() {
-        let globber = GlobberBuilder::new()
+        let builder = GlobberBuilder::new()
             .with_operator(ReverseOp)
             .with_operator(FnOperator::new("SORT_VAL", |candidates: &mut Vec<Item>| {
                 candidates.sort_by_key(|c| c.val);
-            }))
-            .compile("REVERSE(SORT_VAL(item*))")
-            .unwrap();
+            }));
+        let globber = builder.compile("REVERSE(SORT_VAL(item*))").unwrap();
 
         let candidates = vec![
             Item { name: "item1".to_string(), val: 30 },

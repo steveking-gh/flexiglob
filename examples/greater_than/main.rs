@@ -48,9 +48,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let filter_op = FilterGreaterThan { min_size: 150 };
 
     let pattern_str = "BIGGER_THAN(.text*)";
-    let globber = GlobberBuilder::new()
-        .with_operator(filter_op)
-        .compile(pattern_str)?;
+    let builder = GlobberBuilder::new()
+        .with_operator(filter_op);
+    let globber = builder.compile(pattern_str)?;
 
     println!("\nEvaluating pattern: {}", pattern_str);
     let results = globber.run(&candidates, |s| &s.name);
