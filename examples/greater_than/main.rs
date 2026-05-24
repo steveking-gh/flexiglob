@@ -53,7 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .compile(pattern_str)?;
 
     println!("\nEvaluating pattern: {}", pattern_str);
-    let results = globber.run(&candidates, |s| &s.name)?;
+    let results = globber.run(&candidates, |s| &s.name);
 
     println!("Matched and filtered results (size > 150):");
     for r in &results {

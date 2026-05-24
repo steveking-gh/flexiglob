@@ -56,7 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .compile(pattern_str)?;
 
         println!("\nEvaluating pattern (Struct-based): {}", pattern_str);
-        let results = globber.run(&candidates, |s| &s.name)?;
+        let results = globber.run(&candidates, |s| &s.name);
 
         println!("Matched and sorted results:");
         for r in &results {
@@ -75,7 +75,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .compile(pattern_str)?;
 
         println!("\nEvaluating pattern (Inline Closure-based): {}", pattern_str);
-        let results = globber.run(&candidates, |s| &s.name)?;
+        let results = globber.run(&candidates, |s| &s.name);
 
         println!("Matched and sorted results:");
         for r in &results {

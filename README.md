@@ -28,7 +28,7 @@ through an extensible operator registry.
   and suitable for bare-metal, embedded, WebAssembly, or standard application
   use.
 - **Well Bounded Execution**: Uses non-deterministic finite automata (NFA)
-  simulation for worst-case time Complexity O(n×m) where n is the token count
+  simulation for worst-case time complexity O(n×m), where n is the token count
   and m is the candidate string length. Worst-Case space complexity is O(n) to
   store the NFA states.
 
@@ -79,7 +79,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Section { name: ".data.debug".to_string(), size: 200 },
     ];
 
-    let results = globber.run(&candidates, |s| &s.name)?;
+    let results = globber.run(&candidates, |s| &s.name);
 
     // Result: [.text.main (size 500), .text.boot (size 100)]
     println!("{:?}", results);
@@ -199,7 +199,7 @@ let trace_cb = |msg: &str, items: &[Section]| {
     println!("{}: {:?}", msg, items);
 };
 
-globber.run_with_trace(&candidates, |s| &s.name, &trace_cb)?;
+globber.run_with_trace(&candidates, |s| &s.name, &trace_cb);
 ```
 
 To run silently without tracing, callers can use `run` which internally routes tracing to the no-op fallback [noop_trace](file:///c:/Users/kings/Documents/projects/flexiglob/src/lib.rs#L387).

@@ -591,7 +591,7 @@ impl<'a, T> Globber<'a, T> {
         &self,
         candidates: &[T],
         get_name: impl Fn(&T) -> &str,
-    ) -> Result<Vec<T>, ParseError>
+    ) -> Vec<T>
     where
         T: Clone,
     {
@@ -604,7 +604,7 @@ impl<'a, T> Globber<'a, T> {
         candidates: &[T],
         get_name: impl Fn(&T) -> &str,
         trace: &TraceCallback<'_, T>,
-    ) -> Result<Vec<T>, ParseError>
+    ) -> Vec<T>
     where
         T: Clone,
     {
@@ -617,7 +617,7 @@ impl<'a, T> Globber<'a, T> {
         candidates: &[T],
         get_name: &impl Fn(&T) -> &str,
         trace: Option<&TraceCallback<'_, T>>,
-    ) -> Result<Vec<T>, ParseError>
+    ) -> Vec<T>
     where
         T: Clone,
     {
@@ -631,10 +631,10 @@ impl<'a, T> Globber<'a, T> {
                 if let Some(t) = trace {
                     t(&format!("Leaf matched '{}': {} items", pattern, matched.len()), &matched);
                 }
-                Ok(matched)
+                matched
             }
             ParsedPattern::Operator { name, inner } => {
-                let mut matched = self.run_inner(inner, candidates, get_name, trace)?;
+                let mut matched = self.run_inner(inner, candidates, get_name, trace);
                 if name == "REVERSE" {
                     matched.reverse();
                     if let Some(t) = trace {
@@ -648,7 +648,7 @@ impl<'a, T> Globber<'a, T> {
                 } else {
                     unreachable!("operator '{}' in AST but not in registry; compile() prevents this", name);
                 }
-                Ok(matched)
+                matched
             }
         }
     }
@@ -788,7 +788,7 @@ mod tests {
         ];
 
         // Standard evaluation
-        let result = globber.run(&candidates, |item| &item.name).unwrap();
+        let result = globber.run(&candidates, |item| &item.name);
         assert_eq!(result.len(), 3);
         assert_eq!(result[0].name, "item1"); // Sorted would be item2(10), item3(20), item1(30); Reversed is 1, 3, 2.
         assert_eq!(result[1].name, "item3");
@@ -799,7 +799,7 @@ mod tests {
         let trace_cb = |msg: &str, items: &[Item]| {
             logs.borrow_mut().push(format!("{}: {:?}", msg, items.iter().map(|i| &i.name).collect::<Vec<_>>()));
         };
-        let _ = globber.run_with_trace(&candidates, |item| &item.name, &trace_cb).unwrap();
+        let _ = globber.run_with_trace(&candidates, |item| &item.name, &trace_cb);
 
         let logs_vec = logs.into_inner();
         assert_eq!(logs_vec.len(), 3);
@@ -823,7 +823,7 @@ mod tests {
             Item { name: "item3".to_string(), val: 20 },
         ];
 
-        let result = globber.run(&candidates, |item| &item.name).unwrap();
+        let result = globber.run(&candidates, |item| &item.name);
         assert_eq!(result.len(), 3);
         assert_eq!(result[0].name, "item1");
         assert_eq!(result[1].name, "item3");

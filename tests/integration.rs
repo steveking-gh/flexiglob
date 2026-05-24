@@ -67,7 +67,7 @@ fn test_flexiglob_pipeline_integration() {
         logs.borrow_mut().push(format!("{}: {:?}", msg, items.iter().map(|i| &i.name).collect::<Vec<_>>()));
     };
 
-    let result = globber.run_with_trace(&candidates, |s| &s.name, &trace_cb).unwrap();
+    let result = globber.run_with_trace(&candidates, |s| &s.name, &trace_cb);
 
     // Verify filtering and sorting order
     assert_eq!(result.len(), 3);
@@ -100,7 +100,7 @@ fn test_flexiglob_nested_reverse() {
         TargetSection { file: "b.elf".to_string(), name: ".text.b".to_string(), align: 4, size: 32 },
     ];
 
-    let result = globber.run(&candidates, |s| &s.name).unwrap();
+    let result = globber.run(&candidates, |s| &s.name);
 
     assert_eq!(result.len(), 3);
     // Sorted: .text.a, .text.b, .text.c
@@ -188,7 +188,7 @@ fn test_parser_edge_cases() {
 fn test_noop_and_default() {
     // Test default constructor
     let globber = GlobberBuilder::default().compile(".text*").unwrap();
-    let res = globber.run(&[".text".to_string()], |s| s).unwrap();
+    let res = globber.run(&[".text".to_string()], |s| s);
     assert_eq!(res.len(), 1);
 
     // Test noop_trace invocation
@@ -219,7 +219,7 @@ fn test_recursive_glob_integration() {
         "src/parser/ast.rs".to_string(),
         "tests/integration.rs".to_string(),
     ];
-    let res = globber.run(&candidates, |s| s).unwrap();
+    let res = globber.run(&candidates, |s| s);
     assert_eq!(res.len(), 2);
     assert_eq!(res[0], "src/lib.rs");
     assert_eq!(res[1], "src/parser/ast.rs");
@@ -267,7 +267,7 @@ fn test_no_string_payload_pipeline() {
     ];
 
     // Pass a closure returning "" for all candidates to match *
-    let res = globber.run(&candidates, |_| "").unwrap();
+    let res = globber.run(&candidates, |_| "");
 
     assert_eq!(res.len(), 3);
     // SORT_INTS: 10, 20, 30
@@ -293,7 +293,7 @@ fn test_inline_closure_operator_integration() {
         IntPayload { value: 12 },
     ];
 
-    let res = globber.run(&candidates, |_| "").unwrap();
+    let res = globber.run(&candidates, |_| "");
     assert_eq!(res.len(), 2);
     assert_eq!(res[0].value, 10);
     assert_eq!(res[1].value, 24);
@@ -399,7 +399,7 @@ fn test_multibyte_inner_pattern_not_truncated() {
         TargetSection { file: "c.elf".to_string(), name: ".data".to_string(), align: 4, size: 32 },
     ];
 
-    let result = globber.run(&candidates, |s| &s.name).unwrap();
+    let result = globber.run(&candidates, |s| &s.name);
 
     // Both ä.text_* sections must match; .data must not.
     assert_eq!(result.len(), 2);
