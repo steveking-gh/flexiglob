@@ -1,0 +1,40 @@
+src/lib.rs
+  s_406556d2a87011::t_28bcf7844cd5cd 594,607,620,634,637,651
+  s_406556d2a87011::t_609bc55680a92a 791,802
+  s_406556d2a87011::t_0842561d58fcaa 826
+tests/integration.rs
+  s_406556d2a87011::t_02978c33ef2022 222
+  s_406556d2a87011::t_3a60cc12fe8ec2 103,402
+  s_406556d2a87011::t_4040ccb184ce2f 191
+  s_406556d2a87011::t_307fe7e2720a53 270,296
+  s_406556d2a87011::t_87fe21d0765ec9 70
+examples/greater_than/main.rs
+  s_406556d2a87011::t_3530b9e737fb20 56
+examples/sort_size/main.rs
+  s_406556d2a87011::t_c3766737ff76ed 59,78
+README.md
+  h_5b3f31968f5853 31
+  s_406556d2a87011::t_ff4ab57b8628dd 82
+  s_406556d2a87011::t_94057e1b0cdecc 202
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.1",
+  "base_commit_sha": "5a7ba3ad8ff048bd5ae8168ff167850176da47fd",
+  "prompts": {},
+  "humans": {
+    "h_5b3f31968f5853": {
+      "author": "Steve King <12994437+steveking-gh@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_406556d2a87011": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "89dab3ac-ae3c-48be-b29b-98169c1cd0b7",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Steve King <12994437+steveking-gh@users.noreply.github.com>"
+    }
+  }
+}
