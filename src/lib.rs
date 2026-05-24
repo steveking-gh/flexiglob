@@ -43,6 +43,9 @@ pub enum MatchToken {
 
     /// Matches any character in the set (represented by '[chars]').
     Set(BTreeSet<char>),
+
+    /// Matches any non-separator character not in the set (represented by '[^chars]').
+    NegatedSet(BTreeSet<char>),
 }
 
 /// The syntax error kinds returned during parsing.
@@ -115,6 +118,8 @@ pub fn compile_pattern(pattern: &str) -> Result<Vec<MatchToken>, ParseError> {
             '[' => {
                 let start_byte = byte_pos;
                 i += 1; // skip '['
+                let negated = i < chars.len() && chars[i].1 == '^';
+                if negated { i += 1; } // skip '^'
                 let mut set = BTreeSet::new();
                 let mut closed = false;
                 let mut close_byte = 0;
@@ -174,7 +179,11 @@ pub fn compile_pattern(pattern: &str) -> Result<Vec<MatchToken>, ParseError> {
                         message: "Empty brackets '[]' never match anything".to_string(),
                     });
                 }
-                tokens.push(MatchToken::Set(set));
+                if negated {
+                    tokens.push(MatchToken::NegatedSet(set));
+                } else {
+                    tokens.push(MatchToken::Set(set));
+                }
             }
             c => {
                 tokens.push(MatchToken::Char(c));
@@ -246,6 +255,9 @@ pub fn wildcard_match(tokens: &[MatchToken], candidate: &str) -> bool {
                     next[i + 1] = true;
                 }
                 MatchToken::Set(set) if set.contains(&c) => {
+                    next[i + 1] = true;
+                }
+                MatchToken::NegatedSet(set) if c != '/' && c != '\\' && !set.contains(&c) => {
                     next[i + 1] = true;
                 }
                 // Self-loop: wildcard consumes c and stays at i, allowing

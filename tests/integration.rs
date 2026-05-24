@@ -156,6 +156,37 @@ fn test_compile_pattern_edge_cases() {
 }
 
 #[test]
+fn test_negated_bracket_sets() {
+    // Basic negation: matches chars not in set
+    let tok = flexiglob::compile_pattern("[^abc]").unwrap();
+    assert!(flexiglob::wildcard_match(&tok, "d"));
+    assert!(flexiglob::wildcard_match(&tok, "z"));
+    assert!(!flexiglob::wildcard_match(&tok, "a"));
+    assert!(!flexiglob::wildcard_match(&tok, "b"));
+    assert!(!flexiglob::wildcard_match(&tok, "c"));
+
+    // Negated set does not match path separators
+    assert!(!flexiglob::wildcard_match(&tok, "/"));
+    assert!(!flexiglob::wildcard_match(&tok, "\\"));
+
+    // Negated range
+    let tok2 = flexiglob::compile_pattern("[^a-z]").unwrap();
+    assert!(flexiglob::wildcard_match(&tok2, "A"));
+    assert!(flexiglob::wildcard_match(&tok2, "0"));
+    assert!(!flexiglob::wildcard_match(&tok2, "m"));
+
+    // Negated set in a full pattern
+    let tok3 = flexiglob::compile_pattern(".text[^0-9]").unwrap();
+    assert!(flexiglob::wildcard_match(&tok3, ".texta"));
+    assert!(!flexiglob::wildcard_match(&tok3, ".text5"));
+    assert!(!flexiglob::wildcard_match(&tok3, ".text"));
+
+    // [^] (empty negated set) is still an error
+    let err = flexiglob::compile_pattern("[^]").unwrap_err();
+    assert!(matches!(err.kind, ParseErrorKind::EmptyBrackets));
+}
+
+#[test]
 fn test_invalid_range_sets() {
     // Start > End range in brackets
     let tok = flexiglob::compile_pattern("[z-a]").unwrap();
