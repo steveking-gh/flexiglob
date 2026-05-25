@@ -1,0 +1,45 @@
+fuzz/corpus/fuzz_target/008_filter_operator
+  s_c346f08af00af9::t_cd82863f5b312d 1-5
+fuzz/corpus/fuzz_target/003_question_mark
+  s_c346f08af00af9::t_3d61fadfbf40db 1-4
+fuzz/corpus/fuzz_target/009_escaped_wildcard
+  s_c346f08af00af9::t_1c992c3e6da084 1-4
+fuzz/corpus/fuzz_target/007_nested_operators
+  s_c346f08af00af9::t_3d9b9464ee92e2 1-5
+.gitignore
+  s_c346f08af00af9::t_ff3b6559453141 2-3
+fuzz/corpus/fuzz_target/004_bracket_set
+  s_c346f08af00af9::t_720e7fc85dce80 1-5
+fuzz/corpus/fuzz_target/005_negated_bracket
+  s_c346f08af00af9::t_da0c7e894160d5 1-5
+tests/flexiglob_fuzz.dict
+  s_c346f08af00af9::t_2ba38d6fcf98d5 1-36
+fuzz/Cargo.toml
+  s_c346f08af00af9::t_7b3358c0606dc1 1-20
+fuzz/corpus/fuzz_target/001_leaf_glob
+  s_c346f08af00af9::t_acfb62f8736d25 1-4
+fuzz/corpus/fuzz_target/010_invalid_pattern
+  s_c346f08af00af9::t_e7d8a221ae458d 1-3
+fuzz/corpus/fuzz_target/006_reverse_operator
+  s_c346f08af00af9::t_284c7eae667a71 1-5
+fuzz/fuzz_targets/fuzz_target.rs
+  s_c346f08af00af9::t_3f52c2c0e94db7 1-22
+fuzz/corpus/fuzz_target/002_double_wildcard
+  s_c346f08af00af9::t_c700846e331c49 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.1",
+  "base_commit_sha": "b4af9cf8d6e599442c0d6ed180e006827cc98ad6",
+  "prompts": {},
+  "sessions": {
+    "s_c346f08af00af9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4b8b1005-d6a0-4cf0-bc22-1a4f41fc6968",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Steve King <12994437+steveking-gh@users.noreply.github.com>"
+    }
+  }
+}
