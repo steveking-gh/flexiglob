@@ -1,0 +1,4 @@
+.text*
+.text.boot
+.text.main
+.data.debug

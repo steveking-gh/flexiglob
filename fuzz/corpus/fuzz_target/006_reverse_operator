@@ -1,0 +1,5 @@
+REVERSE(.text*)
+.text.boot
+.text.main
+.text.handler
+.data.debug

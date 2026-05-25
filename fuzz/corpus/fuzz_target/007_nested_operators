@@ -1,0 +1,5 @@
+REVERSE(SORT(.text*))
+.text.z
+.text.a
+.text.m
+.data.bss

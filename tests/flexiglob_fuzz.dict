@@ -1,0 +1,36 @@
+# Operators
+"REVERSE"
+"SORT"
+"FILTER"
+
+# Parentheses
+"("
+")"
+
+# Wildcards
+"*"
+"**"
+"?"
+
+# Bracket sets
+"["
+"]"
+"[^"
+"[a-z]"
+"[A-Z]"
+"[0-9]"
+
+# Escape sequences
+"\("
+"\)"
+"\*"
+"\?"
+"\["
+"\\"
+
+# Common path and name tokens
+"/"
+".text"
+"src/"
+".rs"
+".txt"

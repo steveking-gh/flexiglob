@@ -1,0 +1,3 @@
+SORT(.text*
+.text.boot
+.text.main
