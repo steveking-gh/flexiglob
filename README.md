@@ -29,7 +29,7 @@ through an extensible operator registry.
   use.
 - **Well Bounded Execution**: Uses non-deterministic finite automata (NFA)
   simulation for worst-case time complexity O(n×m), where n is the token count
-  and m is the candidate string length. Worst-Case space complexity is O(n) to
+  and m is the candidate string length. Worst-case space complexity is O(n) to
   store the NFA states.
 
 ---
@@ -68,9 +68,9 @@ impl GlobOperator<Section> for SortBySize {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 3. Register operators and compile pattern
     let pattern_str = "SORT_SIZE(.text*)";
-    let globber = GlobberBuilder::new()
-        .with_operator(SortBySize)
-        .compile(pattern_str)?;
+    let builder = GlobberBuilder::new()
+        .with_operator(SortBySize);
+    let globber = builder.compile(pattern_str)?;
 
     // 4. Evaluate matching
     let candidates = vec![
@@ -81,7 +81,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let results = globber.run(&candidates, |s| &s.name);
 
-    // Result: [.text.main (size 500), .text.boot (size 100)]
+    // Result: [.text.boot (size 100), .text.main (size 500)]
     println!("{:?}", results);
     Ok(())
 }
@@ -93,39 +93,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 Flexiglob supports wildcards and escaping rules matching the following syntax:
 
-| Pattern     | Description                                                    |
-| ----------- | -------------------------------------------------------------- |
-| `*`         | Match 0 or more characters, excluding `/` file path separators |
-| `**`        | Match 0 or more characters, including `/` file path separators |
-| `?`         | Match exactly one character                                    |
-| `[<chars>]` | Match any single character in the specified set                |
-| `[a-z]`     | Match any character in the ASCII range `a` to `z`              |
-| `\*`        | Match a literal `*` character                                  |
-| `\?`        | Match a literal `?` character                                  |
-| `\[`        | Match a literal `[` character                                  |
-| `\]`        | Match a literal `]` character                                  |
-| `\"`        | Match a literal `"` character                                  |
-| `\\`        | Match a literal `\` character                                  |
+| Pattern      | Description                                                    |
+| ------------ | -------------------------------------------------------------- |
+| `*`          | Match 0 or more characters, excluding `/` file path separators |
+| `**`         | Match 0 or more characters, including `/` file path separators |
+| `?`          | Match exactly one character                                    |
+| `[<chars>]`  | Match any single character in the specified set                |
+| `[^<chars>]` | Match any single non-separator character not in the set        |
+| `[a-z]`      | Match any character in the ASCII range `a` to `z`              |
+| `\*`         | Match a literal `*` character                                  |
+| `\?`         | Match a literal `?` character                                  |
+| `\[`         | Match a literal `[` character                                  |
+| `\]`         | Match a literal `]` character                                  |
+| `\"`         | Match a literal `"` character                                  |
+| `\\`         | Match a literal `\` character                                  |
 
 ---
 
 ## Extending Flexiglob
 
 To allow users to register and execute custom operators:
-1. Implement the [GlobOperator](file:///c:/Users/kings/Documents/projects/flexiglob/src/lib.rs#L375) trait for the candidate type `T`.
-2. Register the operator instance in the [GlobberBuilder](file:///c:/Users/kings/Documents/projects/flexiglob/src/lib.rs#L390) context using `with_operator`.
-3. Call `compile` to parse the pattern string and validate command names, building the [Globber](file:///c:/Users/kings/Documents/projects/flexiglob/src/lib.rs#L429) instance.
+
+1. Implement the `GlobOperator` trait for the candidate type `T`.
+2. Register the operator instance in `GlobberBuilder` using `with_operator`.
+3. Call `compile` to parse the pattern string and validate operator names, producing a `Globber`.
 4. Call `run` on the compiled `Globber` with candidates.
 
 ---
 
 ## Error Reporting
 
-On syntax or validation failures,
-[GlobberBuilder::compile](file:///c:/Users/kings/Documents/projects/flexiglob/src/lib.rs#L420)
-returns a
-[ParseError](file:///c:/Users/kings/Documents/projects/flexiglob/src/lib.rs#L54)
-structure:
+On syntax or validation failures, `GlobberBuilder::compile` returns a `ParseError` structure:
 
 ```rust
 pub struct ParseError {
@@ -173,26 +171,11 @@ Error: Syntax error in pattern expression
 ───╯
 ```
 
-
-### Interoperating with Ariadne
-Users can translate this relative span into an absolute file location for underline-annotated terminal diagnostic outputs:
-
-```rust
-let absolute_start = literal_offset + error.span.start;
-let absolute_end = literal_offset + error.span.end;
-
-Report::build(ReportKind::Error, file_id, absolute_start)
-    .with_message("Syntax error in pattern")
-    .with_label(Label::new((file_id, absolute_start..absolute_end)).with_message(&error.message))
-    .finish()
-    .print(sources)?;
-```
-
 ---
 
 ## Execution Tracing
 
-Users can log execution progress using `run_with_trace` by providing a [TraceCallback](file:///c:/Users/kings/Documents/projects/flexiglob/src/lib.rs#L384):
+Users can log execution progress using `run_with_trace` by providing a `TraceCallback`:
 
 ```rust
 let trace_cb = |msg: &str, items: &[Section]| {
@@ -202,4 +185,4 @@ let trace_cb = |msg: &str, items: &[Section]| {
 globber.run_with_trace(&candidates, |s| &s.name, &trace_cb);
 ```
 
-To run silently without tracing, callers can use `run` which internally routes tracing to the no-op fallback [noop_trace](file:///c:/Users/kings/Documents/projects/flexiglob/src/lib.rs#L387).
+To run without tracing, use the `run` function.
