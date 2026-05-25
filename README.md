@@ -22,8 +22,6 @@ through an extensible operator registry.
   `REVERSE(MY_FILTER(SORT(foo*)))`.
 - **First-Class Error Diagnostics**: Errors include precise character byte spans
   relative to the input pattern string, enabling rich diagnostic messages.
-- **Optional Tracing Callback**: Inspect intermediate matching states at each
-  pipeline phase via a simple closure hook.
 - **Lightweight & Portable**: Fully `#![no_std]` compatible, dependency-free,
   and suitable for bare-metal, embedded, WebAssembly, or standard application
   use.
@@ -112,12 +110,34 @@ Flexiglob supports wildcards and escaping rules matching the following syntax:
 
 ## Extending Flexiglob
 
+Users can easily extend Flexiglob patterns with their own operators of the form
+`MY_OPERATOR(...)`.  These operators wrap an expression to filter or manipulate
+the in-flight result.  For example, Flexiglob comes with `REVERSE` which simply
+reverses the order of the result:
+
+    // Input: s1abc, s2def, s3ghi
+    "REVERSE(stuff[12]*)"
+    // Resulting match output: s2def, s1abc
+
 To allow users to register and execute custom operators:
 
 1. Implement the `GlobOperator` trait for the candidate type `T`.
 2. Register the operator instance in `GlobberBuilder` using `with_operator`.
 3. Call `compile` to parse the pattern string and validate operator names, producing a `Globber`.
 4. Call `run` on the compiled `Globber` with candidates.
+
+As a built-in example, Flexiglob provides the `REVERSE()` operator defined as follows:
+
+```rust
+pub struct ReverseOp;
+
+impl<T> GlobOperator<T> for ReverseOp {
+    fn name(&self) -> &str { "REVERSE" }
+    fn apply(&self, candidates: &mut Vec<T>) {
+        candidates.reverse();
+    }
+}
+```
 
 ---
 
@@ -170,19 +190,3 @@ Error: Syntax error in pattern expression
    │             ╰─── Unterminated bracket set
 ───╯
 ```
-
----
-
-## Execution Tracing
-
-Users can log execution progress using `run_with_trace` by providing a `TraceCallback`:
-
-```rust
-let trace_cb = |msg: &str, items: &[Section]| {
-    println!("{}: {:?}", msg, items);
-};
-
-globber.run_with_trace(&candidates, |s| &s.name, &trace_cb);
-```
-
-To run without tracing, use the `run` function.

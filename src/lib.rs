@@ -526,12 +526,6 @@ where
     }
 }
 
-/// Closure-based trace logging callback type.
-pub type TraceCallback<'a, T> = dyn Fn(&str, &[T]) + 'a;
-
-/// The standard no-op trace callback helper function.
-pub fn noop_trace<T>(_: &str, _: &[T]) {}
-
 /// The matching and operator execution engine builder registry.
 pub struct GlobberBuilder<'a, T> {
     operators: BTreeMap<String, Box<dyn GlobOperator<T> + 'a>>,
@@ -581,6 +575,15 @@ impl<'a, T> GlobberBuilder<'a, T> {
 
 }
 
+/// Filesystem traversal hint produced by [`Globber::scan_hint`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ScanHint<'a> {
+    /// Static path prefix before the first wildcard — the minimum root to scan.
+    pub root: &'a str,
+    /// True when the pattern contains `**`, requiring recursive traversal.
+    pub recursive: bool,
+}
+
 /// The compiled matching and operator execution engine.
 pub struct Globber<'a, T> {
     pattern: ParsedPattern,
@@ -597,7 +600,7 @@ impl<'a, T> core::fmt::Debug for Globber<'a, T> {
 }
 
 impl<'a, T> Globber<'a, T> {
-    /// Evaluates the compiled pattern without generating any tracing output.
+    /// Evaluates the compiled pattern against a candidate list.
     pub fn run(
         &self,
         candidates: &[T],
@@ -606,20 +609,7 @@ impl<'a, T> Globber<'a, T> {
     where
         T: Clone,
     {
-        self.run_inner(&self.pattern, candidates, &get_name, None)
-    }
-
-    /// Evaluates the compiled pattern while reporting progress to a custom trace hook.
-    pub fn run_with_trace(
-        &self,
-        candidates: &[T],
-        get_name: impl Fn(&T) -> &str,
-        trace: &TraceCallback<'_, T>,
-    ) -> Vec<T>
-    where
-        T: Clone,
-    {
-        self.run_inner(&self.pattern, candidates, &get_name, Some(trace))
+        self.run_inner(&self.pattern, candidates, &get_name)
     }
 
     fn run_inner(
@@ -627,35 +617,77 @@ impl<'a, T> Globber<'a, T> {
         pattern: &ParsedPattern,
         candidates: &[T],
         get_name: &impl Fn(&T) -> &str,
-        trace: Option<&TraceCallback<'_, T>>,
     ) -> Vec<T>
     where
         T: Clone,
     {
         match pattern {
-            ParsedPattern::Leaf { pattern, tokens } => {
-                let matched: Vec<T> = candidates
+            ParsedPattern::Leaf { tokens, .. } => {
+                candidates
                     .iter()
                     .filter(|c| wildcard_match(tokens, get_name(c)))
                     .cloned()
-                    .collect();
-                if let Some(t) = trace {
-                    t(&format!("Leaf matched '{}': {} items", pattern, matched.len()), &matched);
-                }
-                matched
+                    .collect()
             }
             ParsedPattern::Operator { name, inner } => {
-                let mut matched = self.run_inner(inner, candidates, get_name, trace);
+                let mut matched = self.run_inner(inner, candidates, get_name);
                 if let Some(op) = self.operators.get(name) {
                     op.apply(&mut matched);
-                    if let Some(t) = trace {
-                        t(&format!("Applied operator '{}'", name), &matched);
-                    }
                 } else {
                     unreachable!("operator '{}' in AST but not in registry; compile() prevents this", name);
                 }
                 matched
             }
+        }
+    }
+
+    /// Returns a `ScanHint` describing the minimum filesystem traversal needed
+    /// to build a complete candidate set for this pattern.
+    ///
+    /// ```text
+    /// Pattern                  root              recursive
+    /// -------                  ----              ---------
+    /// src/**/*.rs              "src/"            true
+    /// src/parser/*.rs          "src/parser/"     false
+    /// src/parser/ast.rs        "src/parser/ast.rs"  false
+    /// .text*                   ""                false
+    /// SORT_SIZE(src/**/*.rs)   "src/"            true
+    /// ```
+    ///
+    /// Operator wrappers are transparent — traversal descends to the leaf.
+    /// Escaped wildcard characters (e.g. `\*`) do not count as wildcards.
+    pub fn scan_hint(&self) -> ScanHint<'_> {
+        let (pattern, tokens) = Self::find_leaf(&self.pattern);
+
+        // Locate the byte position of the first unescaped wildcard character.
+        let mut iter = pattern.char_indices();
+        let mut wildcard_pos: Option<usize> = None;
+        while let Some((pos, ch)) = iter.next() {
+            if ch == '\\' {
+                iter.next(); // skip the escaped character
+            } else if matches!(ch, '*' | '?' | '[') {
+                wildcard_pos = Some(pos);
+                break;
+            }
+        }
+
+        let root = match wildcard_pos {
+            None => pattern, // no wildcards: full pattern is the path
+            Some(pos) => match pattern[..pos].rfind('/') {
+                None => "",
+                Some(sep) => &pattern[..sep + 1],
+            },
+        };
+
+        let recursive = tokens.iter().any(|t| matches!(t, MatchToken::AnySeq));
+
+        ScanHint { root, recursive }
+    }
+
+    fn find_leaf(pattern: &ParsedPattern) -> (&str, &[MatchToken]) {
+        match pattern {
+            ParsedPattern::Leaf { pattern, tokens } => (pattern.as_str(), tokens),
+            ParsedPattern::Operator { inner, .. } => Self::find_leaf(inner),
         }
     }
 }
@@ -800,18 +832,6 @@ mod tests {
         assert_eq!(result[1].name, "item3");
         assert_eq!(result[2].name, "item2");
 
-        // Traced evaluation
-        let logs = core::cell::RefCell::new(Vec::new());
-        let trace_cb = |msg: &str, items: &[Item]| {
-            logs.borrow_mut().push(format!("{}: {:?}", msg, items.iter().map(|i| &i.name).collect::<Vec<_>>()));
-        };
-        let _ = globber.run_with_trace(&candidates, |item| &item.name, &trace_cb);
-
-        let logs_vec = logs.into_inner();
-        assert_eq!(logs_vec.len(), 3);
-        assert!(logs_vec[0].contains("Leaf matched"));
-        assert!(logs_vec[1].contains("Applied operator 'SORT_VAL'"));
-        assert!(logs_vec[2].contains("Applied operator 'REVERSE'"));
     }
 
     #[test]

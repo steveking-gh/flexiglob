@@ -61,12 +61,7 @@ fn test_flexiglob_pipeline_integration() {
         TargetSection { file: "c.elf".to_string(), name: ".text.init".to_string(), align: 4, size: 4 }, // too small
     ];
 
-    let logs = core::cell::RefCell::new(Vec::new());
-    let trace_cb = |msg: &str, items: &[TargetSection]| {
-        logs.borrow_mut().push(format!("{}: {:?}", msg, items.iter().map(|i| &i.name).collect::<Vec<_>>()));
-    };
-
-    let result = globber.run_with_trace(&candidates, |s| &s.name, &trace_cb);
+    let result = globber.run(&candidates, |s| &s.name);
 
     // Verify filtering and sorting order
     assert_eq!(result.len(), 3);
@@ -77,13 +72,6 @@ fn test_flexiglob_pipeline_integration() {
     assert_eq!(result[0].name, ".text.handler");
     assert_eq!(result[1].name, ".text.main");
     assert_eq!(result[2].name, ".text.boot");
-
-    // Verify trace logs
-    let logs_vec = logs.into_inner();
-    assert_eq!(logs_vec.len(), 3);
-    assert!(logs_vec[0].contains("Leaf matched"));
-    assert!(logs_vec[1].contains("Applied operator 'FILTER_MIN_SIZE'"));
-    assert!(logs_vec[2].contains("Applied operator 'SORT_BY_ALIGNMENT'"));
 }
 
 #[test]
@@ -156,6 +144,38 @@ fn test_compile_pattern_edge_cases() {
 }
 
 #[test]
+fn test_scan_hint() {
+    use flexiglob::ScanHint;
+
+    let builder = GlobberBuilder::<String>::new();
+
+    // ** pattern: recursive, prefix up to last separator
+    let g = builder.compile("src/**/*.rs").unwrap();
+    assert_eq!(g.scan_hint(), ScanHint { root: "src/", recursive: true });
+
+    // Single * pattern: not recursive, prefix up to last separator
+    let g2 = builder.compile("src/parser/*.rs").unwrap();
+    assert_eq!(g2.scan_hint(), ScanHint { root: "src/parser/", recursive: false });
+
+    // No path separator before wildcard
+    let g3 = builder.compile(".text*").unwrap();
+    assert_eq!(g3.scan_hint(), ScanHint { root: "", recursive: false });
+
+    // No wildcards: full path, not recursive
+    let g4 = builder.compile("src/parser/ast.rs").unwrap();
+    assert_eq!(g4.scan_hint(), ScanHint { root: "src/parser/ast.rs", recursive: false });
+
+    // Escaped wildcard not counted — real wildcard is later
+    let g5 = builder.compile("src/foo\\*.bar/baz*").unwrap();
+    assert_eq!(g5.scan_hint(), ScanHint { root: "src/foo\\*.bar/", recursive: false });
+
+    // Operator wrapper is transparent
+    let builder2 = GlobberBuilder::<String>::new().with_operator(flexiglob::ReverseOp);
+    let g6 = builder2.compile("REVERSE(src/**/*.rs)").unwrap();
+    assert_eq!(g6.scan_hint(), ScanHint { root: "src/", recursive: true });
+}
+
+#[test]
 fn test_negated_bracket_sets() {
     // Basic negation: matches chars not in set
     let tok = flexiglob::compile_pattern("[^abc]").unwrap();
@@ -224,8 +244,6 @@ fn test_noop_and_default() {
     let res = globber.run(&[".text".to_string()], |s| s);
     assert_eq!(res.len(), 1);
 
-    // Test noop_trace invocation
-    flexiglob::noop_trace("test", &res);
 }
 
 #[test]
