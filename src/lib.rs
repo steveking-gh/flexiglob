@@ -54,6 +54,7 @@ pub enum ParseErrorKind {
     EmptyPattern,
     InvalidOperator(String),
     MismatchedParentheses,
+    UnexpectedParen,
     UnterminatedBracketSet,
     EmptyBrackets,
     UnexpectedTrailingCharacters,
@@ -184,6 +185,13 @@ pub fn compile_pattern(pattern: &str) -> Result<Vec<MatchToken>, ParseError> {
                 } else {
                     tokens.push(MatchToken::Set(set));
                 }
+            }
+            '(' | ')' => {
+                return Err(ParseError {
+                    kind: ParseErrorKind::UnexpectedParen,
+                    span: byte_pos..byte_pos + 1,
+                    message: format!("Unescaped '{}' in glob pattern; use \\{} for a literal parenthesis", ch, ch),
+                });
             }
             c => {
                 tokens.push(MatchToken::Char(c));
@@ -351,18 +359,32 @@ fn parse_operator_syntax_or_error(
     };
     let op_name = trimmed[..first_paren].trim();
 
-    // Validate op_name is a valid identifier
+    // Validate op_name is a valid identifier; '(' is reserved so a non-identifier
+    // prefix is always an error rather than a fallthrough to leaf.
+    let paren_offset = current_offset + first_paren;
     if op_name.is_empty() {
-        return Ok(None);
+        return Err(ParseError {
+            kind: ParseErrorKind::UnexpectedParen,
+            span: paren_offset..paren_offset + 1,
+            message: "Unexpected '(' with no operator name".to_string(),
+        });
     }
     for (idx, c) in op_name.chars().enumerate() {
         if idx == 0 {
             if !c.is_alphabetic() && c != '_' {
-                return Ok(None);
+                return Err(ParseError {
+                    kind: ParseErrorKind::UnexpectedParen,
+                    span: paren_offset..paren_offset + 1,
+                    message: format!("'(' must be preceded by a valid operator name, not '{}'", op_name),
+                });
             }
         } else {
             if !c.is_alphanumeric() && c != '_' {
-                return Ok(None);
+                return Err(ParseError {
+                    kind: ParseErrorKind::UnexpectedParen,
+                    span: paren_offset..paren_offset + 1,
+                    message: format!("'(' must be preceded by a valid operator name, not '{}'", op_name),
+                });
             }
         }
     }

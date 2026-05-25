@@ -116,6 +116,27 @@ fn test_flexiglob_invalid_inputs() {
 }
 
 #[test]
+fn test_multi_glob_not_supported() {
+    let builder = GlobberBuilder::new()
+        .with_operator(ReverseOp)
+        .with_operator(SortByNameOp);
+
+    // "REVERSE(*.txt(SORT(**))" — 3 opens, 2 closes.
+    // The parser commits to REVERSE as an operator, then cannot find a matching ')' for
+    // its opening paren (depth never returns to zero), so it errors.
+    let err = builder.compile("REVERSE(*.txt(SORT(**))").unwrap_err();
+    assert!(matches!(err.kind, ParseErrorKind::MismatchedParentheses));
+    assert_eq!(err.span, 7..8); // the '(' immediately after REVERSE
+
+    // With balanced parens — "REVERSE(*.txt(SORT(**)))" — the '(' after '*.txt'
+    // is not preceded by a valid operator name, so it now errors rather than
+    // silently treating the whole inner string as a leaf glob.
+    let err2 = builder.compile("REVERSE(*.txt(SORT(**)))").unwrap_err();
+    assert!(matches!(err2.kind, ParseErrorKind::UnexpectedParen));
+    assert_eq!(err2.span, 13..14); // the '(' immediately after '*.txt'
+}
+
+#[test]
 fn test_display_error() {
     let err = ParsedPattern::parse("", |_| false).unwrap_err();
     assert_eq!(err.to_string(), "Empty pattern string at 0..0");
@@ -223,17 +244,22 @@ fn test_parser_edge_cases() {
     let err = ParsedPattern::parse("   ", |_| false).unwrap_err();
     assert!(matches!(err.kind, ParseErrorKind::EmptyPattern));
 
-    // Empty operator name (starts with paren)
-    let pat1 = ParsedPattern::parse("(.text*)", |_| false).unwrap();
-    assert_eq!(pat1, leaf("(.text*)"));
+    // '(' is reserved — no valid operator name before it is always an error.
 
-    // Operator name starts with number (invalid identifier)
-    let pat2 = ParsedPattern::parse("1SORT(.text*)", |_| false).unwrap();
-    assert_eq!(pat2, leaf("1SORT(.text*)"));
+    // Empty operator name (paren at start)
+    let err1 = ParsedPattern::parse("(.text*)", |_| false).unwrap_err();
+    assert!(matches!(err1.kind, ParseErrorKind::UnexpectedParen));
+    assert_eq!(err1.span, 0..1);
+
+    // Operator name starts with digit (invalid identifier)
+    let err2 = ParsedPattern::parse("1SORT(.text*)", |_| false).unwrap_err();
+    assert!(matches!(err2.kind, ParseErrorKind::UnexpectedParen));
+    assert_eq!(err2.span, 5..6);
 
     // Operator name contains hyphen (invalid identifier)
-    let pat3 = ParsedPattern::parse("SORT-NAME(.text*)", |_| false).unwrap();
-    assert_eq!(pat3, leaf("SORT-NAME(.text*)"));
+    let err3 = ParsedPattern::parse("SORT-NAME(.text*)", |_| false).unwrap_err();
+    assert!(matches!(err3.kind, ParseErrorKind::UnexpectedParen));
+    assert_eq!(err3.span, 9..10);
 }
 
 #[test]

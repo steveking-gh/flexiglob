@@ -123,7 +123,8 @@ To allow users to register and execute custom operators:
 
 1. Implement the `GlobOperator` trait for the candidate type `T`.
 2. Register the operator instance in `GlobberBuilder` using `with_operator`.
-3. Call `compile` to parse the pattern string and validate operator names, producing a `Globber`.
+3. Call `compile` to parse the pattern string and validate operator names,
+   producing a `Globber`.
 4. Call `run` on the compiled `Globber` with candidates.
 
 As a built-in example, Flexiglob provides the `REVERSE()` operator defined as follows:
