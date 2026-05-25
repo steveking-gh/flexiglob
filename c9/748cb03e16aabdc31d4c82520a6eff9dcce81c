@@ -1,0 +1,36 @@
+.claude/settings.local.json
+  s_406556d2a87011::t_b003bcb84db271 1-7
+examples/run_with_trace/main.rs
+  s_406556d2a87011::t_b8803f88c85f41 1-50
+README.md
+  s_406556d2a87011::t_ced9d3d34995fe 96-100,104-109
+  s_406556d2a87011::t_7ec49dd4802d17 178
+  s_406556d2a87011::t_9898cf61d41fa6 71-73,84
+  s_406556d2a87011::t_b7361dc4c880e0 116
+  s_406556d2a87011::t_218dadf1c91b24 117-119
+  s_406556d2a87011::t_5c4c17af2036c4 126
+  s_406556d2a87011::t_419679b2c02887 101-103
+  s_406556d2a87011::t_88e3df31b5f919 32
+  h_5b3f31968f5853 188
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.1",
+  "base_commit_sha": "c9748cb03e16aabdc31d4c82520a6eff9dcce81c",
+  "prompts": {},
+  "humans": {
+    "h_5b3f31968f5853": {
+      "author": "Steve King <12994437+steveking-gh@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_406556d2a87011": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "89dab3ac-ae3c-48be-b29b-98169c1cd0b7",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Steve King <12994437+steveking-gh@users.noreply.github.com>"
+    }
+  }
+}
