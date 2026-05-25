@@ -20,13 +20,13 @@
 "[A-Z]"
 "[0-9]"
 
-# Escape sequences
-"\("
-"\)"
-"\*"
-"\?"
-"\["
-"\\"
+# Escape sequences (backslash doubled per libFuzzer dict format)
+"\\("
+"\\)"
+"\\*"
+"\\?"
+"\\["
+"\\\\"
 
 # Common path and name tokens
 "/"
