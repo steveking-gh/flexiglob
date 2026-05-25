@@ -45,42 +45,92 @@ input strings.  The code implements a custom operator `SORT_SIZE` to sort the
 sections by a size property.
 
 ```rust
-use flexiglob::{GlobberBuilder, GlobOperator};
+use flexiglob::{FnOperator, GlobOperator, GlobberBuilder, ReverseOp};
 
-// 1. Define candidate structure
+// Define the data structure to match against. While fully under user control,
+// this structure should have at least a string field. The closure passed to
+// `globber.run` extracts the string from this structure.
 #[derive(Clone, Debug)]
 struct Section {
+    // The string to match against.
     name: String,
+    // An additional custom field to sort by.
     size: u64,
 }
 
-// 2. Define custom operator
+// Style A: Struct-Based Custom Operator
+// This is the traditional approach. It allows the operator to hold configuration
+// parameters or state inside struct fields.
 struct SortBySize;
+
 impl GlobOperator<Section> for SortBySize {
-    fn name(&self) -> &str { "SORT_SIZE" }
+    fn name(&self) -> &str {
+        "SORT_SIZE"
+    }
+
     fn apply(&self, candidates: &mut Vec<Section>) {
         candidates.sort_by_key(|s| s.size);
     }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 3. Register operators and compile pattern
-    let pattern_str = "SORT_SIZE(.text*)";
-    let builder = GlobberBuilder::new()
-        .with_operator(SortBySize);
-    let globber = builder.compile(pattern_str)?;
-
-    // 4. Evaluate matching
     let candidates = vec![
-        Section { name: ".text.boot".to_string(), size: 100 },
-        Section { name: ".text.main".to_string(), size: 500 },
-        Section { name: ".data.debug".to_string(), size: 200 },
+        Section {
+            name: ".text.boot".to_string(),
+            size: 100,
+        },
+        Section {
+            name: ".text.main".to_string(),
+            size: 500,
+        },
+        Section {
+            name: ".data.debug".to_string(),
+            size: 200,
+        },
     ];
 
-    let results = globber.run(&candidates, |s| &s.name);
+    println!("Input candidates:");
+    for c in &candidates {
+        println!("  Name: {}, Size: {}", c.name, c.size);
+    }
 
-    // Result: [.text.boot (size 100), .text.main (size 500)]
-    println!("{:?}", results);
+    // Style A: Struct-Based Custom Operator "SORT_SIZE".  We also REVERSE()
+    // the sorted list to demonstrate operator nesting.
+    {
+        let pattern_str = "REVERSE(SORT_SIZE(.text*))";
+        let builder = GlobberBuilder::new()
+            .with_operator(ReverseOp)
+            .with_operator(SortBySize);
+        let globber = builder.compile(pattern_str)?;
+
+        println!("\nEvaluating pattern (Struct-based): {}", pattern_str);
+        let results = globber.run(&candidates, |s| &s.name);
+
+        println!("Matched and sorted results:");
+        for r in &results {
+            println!("  Name: {}, Size: {}", r.name, r.size);
+        }
+    }
+
+    // Style B: Inline Closure-Based Custom Operator "INLINE_SORT_SIZE".  This
+    // allows registering custom operators inline without defining a new struct.
+    {
+        let pattern_str = "INLINE_SORT_SIZE(.text*)";
+        let builder = GlobberBuilder::new()
+            .with_operator(FnOperator::new("INLINE_SORT_SIZE", |candidates: &mut Vec<Section>| {
+                candidates.sort_by_key(|s| s.size);
+            }));
+        let globber = builder.compile(pattern_str)?;
+
+        println!("\nEvaluating pattern (Inline Closure-based): {}", pattern_str);
+        let results = globber.run(&candidates, |s| &s.name);
+
+        println!("Matched and sorted results:");
+        for r in &results {
+            println!("  Name: {}, Size: {}", r.name, r.size);
+        }
+    }
+
     Ok(())
 }
 ```
@@ -91,20 +141,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 Flexiglob supports wildcards and escaping rules matching the following syntax:
 
-| Pattern      | Description                                                    |
-| ------------ | -------------------------------------------------------------- |
-| `*`          | Match 0 or more characters, excluding `/` file path separators |
-| `**`         | Match 0 or more characters, including `/` file path separators |
-| `?`          | Match exactly one character                                    |
-| `[<chars>]`  | Match any single character in the specified set                |
-| `[^<chars>]` | Match any single non-separator character not in the set        |
-| `[a-z]`      | Match any character in the ASCII range `a` to `z`              |
-| `\*`         | Match a literal `*` character                                  |
-| `\?`         | Match a literal `?` character                                  |
-| `\[`         | Match a literal `[` character                                  |
-| `\]`         | Match a literal `]` character                                  |
-| `\"`         | Match a literal `"` character                                  |
-| `\\`         | Match a literal `\` character                                  |
+| Pattern      | Description                                                     |
+| ------------ | --------------------------------------------------------------- |
+| `*`          | Match 0 or more characters, excluding `/` file path separators  |
+| `**`         | Match 0 or more characters, including `/` file path separators  |
+| `?`          | Match exactly one character, excluding `/` file path separators |
+| `[<chars>]`  | Match any single character in the specified set                 |
+| `[^<chars>]` | Match any single non-separator character not in the set         |
+| `[a-z]`      | Match any character in the ASCII range `a` to `z`               |
+| `\*`         | Match a literal `*` character                                   |
+| `\?`         | Match a literal `?` character                                   |
+| `\[`         | Match a literal `[` character                                   |
+| `\]`         | Match a literal `]` character                                   |
+| `\(`         | Match a literal `(` character                                   |
+| `\)`         | Match a literal `)` character                                   |
+| `\"`         | Match a literal `"` character                                   |
+| `\"`         | Match a literal `"` character                                   |
+| `\\`         | Match a literal `\` character                                   |
 
 ---
 
@@ -191,3 +244,9 @@ Error: Syntax error in pattern expression
    │             ╰─── Unterminated bracket set
 ───╯
 ```
+
+## Fuzz Testing
+
+Flexiglob supports fuzz testing which tries to induce panics in the flexiglob library.  Running fuzz tests requires a Linux development environment.  To run the fuzzer, use
+
+    cargo +nightly fuzz run fuzz_target -- -dict=tests/flexiglob_fuzz.dict
