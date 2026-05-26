@@ -135,6 +135,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+Produces the following output:
+
+    $ cargo run --example sort_size
+        Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.06s
+        Running `target\debug\examples\sort_size.exe`
+    Input candidates:
+      Name: .text.boot, Size: 100
+      Name: .text.main, Size: 500
+      Name: .data.debug, Size: 200
+
+    Evaluating pattern (Struct-based): REVERSE(SORT_SIZE(.text*))
+    Matched and sorted results:
+      Name: .text.main, Size: 500
+      Name: .text.boot, Size: 100
+
+    Evaluating pattern (Inline Closure-based): INLINE_SORT_SIZE(.text*)
+    Matched and sorted results:
+      Name: .text.boot, Size: 100
+      Name: .text.main, Size: 500
+
 ---
 
 ## Pattern Matching Reference
@@ -143,8 +163,8 @@ Flexiglob supports wildcards and escaping rules matching the following syntax:
 
 | Pattern      | Description                                                     |
 | ------------ | --------------------------------------------------------------- |
-| `*`          | Match 0 or more characters, excluding `/` file path separators  |
-| `**`         | Match 0 or more characters, including `/` file path separators  |
+| `*`          | Match 0 or more characters, excluding `/` file path separators.<br>This form does *not* match files in subdirectories. |
+| `**`         | Match 0 or more characters, including `/` file path separators.<br>This form does match files in subdirectories.  |
 | `?`          | Match exactly one character, excluding `/` file path separators |
 | `[<chars>]`  | Match any single character in the specified set                 |
 | `[^<chars>]` | Match any single non-separator character not in the set         |
