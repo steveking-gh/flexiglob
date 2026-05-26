@@ -21,7 +21,7 @@ impl GlobOperator<Section> for SortBySize {
         "SORT_SIZE"
     }
 
-    fn apply(&self, candidates: &mut Vec<Section>) {
+    fn apply(&self, candidates: &mut Vec<&Section>) {
         candidates.sort_by_key(|s| s.size);
     }
 }
@@ -70,7 +70,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let pattern_str = "INLINE_SORT_SIZE(.text*)";
         let builder = GlobberBuilder::new()
-            .with_operator(FnOperator::new("INLINE_SORT_SIZE", |candidates: &mut Vec<Section>| {
+            .with_operator(FnOperator::new("INLINE_SORT_SIZE", |candidates: &mut Vec<&Section>| {
                 candidates.sort_by_key(|s| s.size);
             }));
         let globber = builder.compile(pattern_str)?;

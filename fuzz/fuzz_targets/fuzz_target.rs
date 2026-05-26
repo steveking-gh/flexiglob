@@ -11,8 +11,8 @@ fuzz_target!(|data: &[u8]| {
 
     let builder = GlobberBuilder::new()
         .with_operator(ReverseOp)
-        .with_operator(FnOperator::new("SORT", |v: &mut Vec<String>| v.sort()))
-        .with_operator(FnOperator::new("FILTER", |v: &mut Vec<String>| {
+        .with_operator(FnOperator::new("SORT", |v: &mut Vec<&String>| v.sort()))
+        .with_operator(FnOperator::new("FILTER", |v: &mut Vec<&String>| {
             v.retain(|s| !s.is_empty())
         }));
 

@@ -19,7 +19,7 @@ struct TargetSection {
 struct SortByNameOp;
 impl GlobOperator<TargetSection> for SortByNameOp {
     fn name(&self) -> &str { "SORT" }
-    fn apply(&self, candidates: &mut Vec<TargetSection>) {
+    fn apply(&self, candidates: &mut Vec<&TargetSection>) {
         candidates.sort_by(|a, b| a.name.cmp(&b.name));
     }
 }
@@ -28,8 +28,7 @@ impl GlobOperator<TargetSection> for SortByNameOp {
 struct SortByAlignmentOp;
 impl GlobOperator<TargetSection> for SortByAlignmentOp {
     fn name(&self) -> &str { "SORT_BY_ALIGNMENT" }
-    fn apply(&self, candidates: &mut Vec<TargetSection>) {
-        // Larger alignments first (descending order)
+    fn apply(&self, candidates: &mut Vec<&TargetSection>) {
         candidates.sort_by_key(|c| core::cmp::Reverse(c.align));
     }
 }
@@ -40,7 +39,7 @@ struct FilterMinSizeOp {
 }
 impl GlobOperator<TargetSection> for FilterMinSizeOp {
     fn name(&self) -> &str { "FILTER_MIN_SIZE" }
-    fn apply(&self, candidates: &mut Vec<TargetSection>) {
+    fn apply(&self, candidates: &mut Vec<&TargetSection>) {
         candidates.retain(|c| c.size >= self.min_size);
     }
 }
@@ -267,7 +266,8 @@ fn test_noop_and_default() {
     // Test default constructor
     let builder = GlobberBuilder::default();
     let globber = builder.compile(".text*").unwrap();
-    let res = globber.run(&[".text".to_string()], |s| s);
+    let candidates = [".text".to_string()];
+    let res = globber.run(&candidates, |s| s);
     assert_eq!(res.len(), 1);
 
 }
@@ -328,7 +328,7 @@ impl GlobOperator<IntPayload> for SortIntsOp {
     fn name(&self) -> &str {
         "SORT_INTS"
     }
-    fn apply(&self, candidates: &mut Vec<IntPayload>) {
+    fn apply(&self, candidates: &mut Vec<&IntPayload>) {
         candidates.sort_by_key(|c| c.value);
     }
 }
@@ -360,22 +360,22 @@ fn test_no_string_payload_pipeline() {
 #[test]
 fn test_inline_closure_operator_integration() {
     let builder = GlobberBuilder::new()
-        .with_operator(FnOperator::new("DOUBLE_VALS", |candidates: &mut Vec<IntPayload>| {
-            for c in candidates.iter_mut() {
-                c.value *= 2;
-            }
+        .with_operator(FnOperator::new("SORT_VALS", |candidates: &mut Vec<&IntPayload>| {
+            candidates.sort_by_key(|c| c.value);
         }));
-    let globber = builder.compile("DOUBLE_VALS(*)").unwrap();
+    let globber = builder.compile("SORT_VALS(*)").unwrap();
 
     let candidates = vec![
-        IntPayload { value: 5 },
         IntPayload { value: 12 },
+        IntPayload { value: 5 },
+        IntPayload { value: 9 },
     ];
 
     let res = globber.run(&candidates, |_| "");
-    assert_eq!(res.len(), 2);
-    assert_eq!(res[0].value, 10);
-    assert_eq!(res[1].value, 24);
+    assert_eq!(res.len(), 3);
+    assert_eq!(res[0].value, 5);
+    assert_eq!(res[1].value, 9);
+    assert_eq!(res[2].value, 12);
 }
 
 // --- Empty bracket set ---

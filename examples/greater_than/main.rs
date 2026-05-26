@@ -18,7 +18,7 @@ impl GlobOperator<Section> for FilterGreaterThan {
         "BIGGER_THAN"
     }
 
-    fn apply(&self, candidates: &mut Vec<Section>) {
+    fn apply(&self, candidates: &mut Vec<&Section>) {
         candidates.retain(|s| s.size > self.min_size);
     }
 }

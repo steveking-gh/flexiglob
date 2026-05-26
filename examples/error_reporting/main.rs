@@ -6,7 +6,7 @@ impl<T> GlobOperator<T> for SortOp {
     fn name(&self) -> &str {
         "SORT"
     }
-    fn apply(&self, _candidates: &mut Vec<T>) {}
+    fn apply(&self, _candidates: &mut Vec<&T>) {}
 }
 
 fn print_diagnostic(pattern: &str, file_name: &str, error: &flexiglob::ParseError) {

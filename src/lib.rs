@@ -497,8 +497,8 @@ pub trait GlobOperator<T> {
     /// The operator name used for pattern matching.
     fn name(&self) -> &str;
 
-    /// Modifies matching candidate elements in-place.
-    fn apply(&self, candidates: &mut Vec<T>);
+    /// Reorders or filters the matched candidate references in-place.
+    fn apply(&self, candidates: &mut Vec<&T>);
 }
 
 /// A ready-to-use operator that reverses the matched candidate list.
@@ -506,15 +506,17 @@ pub struct ReverseOp;
 
 impl<T> GlobOperator<T> for ReverseOp {
     fn name(&self) -> &str { "REVERSE" }
-    fn apply(&self, candidates: &mut Vec<T>) {
+    fn apply(&self, candidates: &mut Vec<&T>) {
         candidates.reverse();
     }
 }
 
 /// A generic closure-based operator wrapper.
+// for<'a>: the closure is stored now but called later with references whose
+// lifetime is fixed by the caller's candidates slice, so F must work for any 'a.
 pub struct FnOperator<T, F>
 where
-    F: Fn(&mut Vec<T>),
+    F: for<'a> Fn(&mut Vec<&'a T>),
 {
     name: &'static str,
     func: F,
@@ -523,7 +525,7 @@ where
 
 impl<T, F> FnOperator<T, F>
 where
-    F: Fn(&mut Vec<T>),
+    F: for<'a> Fn(&mut Vec<&'a T>),
 {
     /// Creates a new closure-based operator wrapper with the specified static name.
     pub fn new(name: &'static str, func: F) -> Self {
@@ -537,13 +539,13 @@ where
 
 impl<T, F> GlobOperator<T> for FnOperator<T, F>
 where
-    F: Fn(&mut Vec<T>),
+    F: for<'a> Fn(&mut Vec<&'a T>),
 {
     fn name(&self) -> &str {
         self.name
     }
 
-    fn apply(&self, candidates: &mut Vec<T>) {
+    fn apply(&self, candidates: &mut Vec<&T>) {
         (self.func)(candidates);
     }
 }
@@ -622,33 +624,29 @@ impl<'a, T> core::fmt::Debug for Globber<'a, T> {
 }
 
 impl<'a, T> Globber<'a, T> {
-    /// Evaluates the compiled pattern against a candidate list.
-    pub fn run(
+    /// Evaluates the compiled pattern against a candidate list, returning
+    /// references into the original slice. No `Clone` bound is required.
+    pub fn run<'c>(
         &self,
-        candidates: &[T],
+        candidates: &'c [T],
         get_name: impl Fn(&T) -> &str,
-    ) -> Vec<T>
-    where
-        T: Clone,
+    ) -> Vec<&'c T>
     {
         self.run_inner(&self.pattern, candidates, &get_name)
     }
 
-    fn run_inner(
+    fn run_inner<'c>(
         &self,
         pattern: &ParsedPattern,
-        candidates: &[T],
+        candidates: &'c [T],
         get_name: &impl Fn(&T) -> &str,
-    ) -> Vec<T>
-    where
-        T: Clone,
+    ) -> Vec<&'c T>
     {
         match pattern {
             ParsedPattern::Leaf { tokens, .. } => {
                 candidates
                     .iter()
                     .filter(|c| wildcard_match(tokens, get_name(c)))
-                    .cloned()
                     .collect()
             }
             ParsedPattern::Operator { name, inner } => {
@@ -829,7 +827,7 @@ mod tests {
     struct SortValOp;
     impl GlobOperator<Item> for SortValOp {
         fn name(&self) -> &str { "SORT_VAL" }
-        fn apply(&self, candidates: &mut Vec<Item>) {
+        fn apply(&self, candidates: &mut Vec<&Item>) {
             candidates.sort_by_key(|c| c.val);
         }
     }
@@ -860,7 +858,7 @@ mod tests {
     fn test_fn_operator() {
         let builder = GlobberBuilder::new()
             .with_operator(ReverseOp)
-            .with_operator(FnOperator::new("SORT_VAL", |candidates: &mut Vec<Item>| {
+            .with_operator(FnOperator::new("SORT_VAL", |candidates: &mut Vec<&Item>| {
                 candidates.sort_by_key(|c| c.val);
             }));
         let globber = builder.compile("REVERSE(SORT_VAL(item*))").unwrap();
