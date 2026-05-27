@@ -9,7 +9,7 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/steveking-gh/flexiglob"
 homepage = "https://github.com/steveking-gh/flexiglob"
-keywords = ["glob", "wildcard", "pattern-matching", "no-std", "linker"]
+keywords = ["glob", "wildcard", "pattern-matching", "no-std"]
 categories = ["parser-implementations", "no-std"]
 exclude = [".claude", "docs", "*.code-workspace"]
 
