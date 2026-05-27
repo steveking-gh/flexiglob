@@ -240,6 +240,17 @@ glob strings:
      "SORT(some/path/*.elf)"
      "REVERSE(SORT(some/path/*.elf))"
 
+Examples:
+
+| Pattern                | root                | is_recursive | is_literal |
+| ---------------------- | ------------------- | ------------ | ---------- |
+| src/**/*.rs            | "src/"              | true         | false      |
+| src/parser/*.rs        | "src/parser/"       | false        | false      |
+| src/parser/ast.rs      | "src/parser/ast.rs" | false        | true       |
+| .text*                 | ""                  | false        | false      |
+| src/foo\*.rs           | "src/foo\*.rs"      | false        | true       |
+| SORT_SIZE(src/**/*.rs) | "src/"              | true         | false      |
+
 ---
 
 ## Error Reporting
