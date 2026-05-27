@@ -1,0 +1,14 @@
+Cargo.toml
+  h_5b3f31968f5853 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "3e42064d31bfe3d2abe62e0c96c8863e2aa63279",
+  "prompts": {},
+  "humans": {
+    "h_5b3f31968f5853": {
+      "author": "Steve King <12994437+steveking-gh@users.noreply.github.com>"
+    }
+  }
+}
