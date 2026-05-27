@@ -193,6 +193,10 @@ fn test_scan_hint() {
     let g6 = builder.compile("src/foo\\*.bar/baz*").unwrap();
     assert_eq!(g6.scan_hint(), ScanHint { root: "src/foo\\*.bar/", is_recursive: false, is_literal: false });
 
+    // Wildcard in filename portion after a directory prefix — root is the directory
+    let g_foo = builder.compile("src/foo*.rs").unwrap();
+    assert_eq!(g_foo.scan_hint(), ScanHint { root: "src/", is_recursive: false, is_literal: false });
+
     // Operator wrapper is transparent
     let builder2 = GlobberBuilder::<String>::new().with_operator(flexiglob::ReverseOp);
     let g7 = builder2.compile("REVERSE(src/**/*.rs)").unwrap();

@@ -248,7 +248,7 @@ Examples:
 | src/parser/*.rs        | "src/parser/"       | false        | false      |
 | src/parser/ast.rs      | "src/parser/ast.rs" | false        | true       |
 | .text*                 | ""                  | false        | false      |
-| src/foo\*.rs           | "src/foo\*.rs"      | false        | true       |
+| src/foo\*.rs           | "src/"              | false        | true       |
 | SORT_SIZE(src/**/*.rs) | "src/"              | true         | false      |
 
 ---
