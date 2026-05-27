@@ -94,6 +94,8 @@ pub fn compile_pattern(pattern: &str) -> Result<Vec<MatchToken>, ParseError> {
             '\\' => {
                 if i + 1 < chars.len() {
                     tokens.push(MatchToken::Char(chars[i + 1].1));
+                    // +2 skips the escaped character; +1 would re-examine it
+                    // as a potential wildcard on the next iteration.
                     i += 2;
                 } else {
                     return Err(ParseError {
@@ -124,7 +126,8 @@ pub fn compile_pattern(pattern: &str) -> Result<Vec<MatchToken>, ParseError> {
                 let mut set = BTreeSet::new();
                 let mut closed = false;
                 let mut close_byte = 0;
-
+                // The unterminated-bracket error is checked after this loop, not
+                // inside it, so the span can cover the full unclosed fragment.
                 while i < chars.len() {
                     let cur_ch = chars[i].1;
                     if cur_ch == ']' {
@@ -154,7 +157,8 @@ pub fn compile_pattern(pattern: &str) -> Result<Vec<MatchToken>, ParseError> {
                                 }
                             }
                         } else {
-                            // Invalid range, insert characters literally
+                            // Invalid range (start > end): treat the three characters
+                            // as literals, matching the behavior of most glob tools.
                             set.insert(start_ch);
                             set.insert('-');
                             set.insert(end_ch);

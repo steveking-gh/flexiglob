@@ -222,13 +222,12 @@ building the input set.
 
     let hint = globber.scan_hint();
 
-For example, when matching a set of files, the `root`
-indicates the base path to the relevant files before the first wildcard.
+When matching files, `ScanHint` returns the filesystem traversal needed to build
+a complete candidate set for this pattern.
 
 The members of `scan_hint` result are as follows:
 
-- `root` - Deepest static prefix before the first wildcard, typically used for
-  file system globs.
+- `root` - Longest match string before the first wildcard
 - `is_recursive` - true if the pattern contains ** and needs recursive traversal
   for file system globs.
 - `is_literal` - true if the pattern contains no wildcards at all.
