@@ -209,9 +209,9 @@ fn test_negated_bracket_sets() {
     assert!(!flexiglob::wildcard_match(&tok, "b"));
     assert!(!flexiglob::wildcard_match(&tok, "c"));
 
-    // Negated set does not match path separators
+    // '/' is the only path separator; '\' is an ordinary character in candidates
     assert!(!flexiglob::wildcard_match(&tok, "/"));
-    assert!(!flexiglob::wildcard_match(&tok, "\\"));
+    assert!(flexiglob::wildcard_match(&tok, "\\"));
 
     // Negated range
     let tok2 = flexiglob::compile_pattern("[^a-z]").unwrap();
@@ -380,6 +380,33 @@ fn test_inline_closure_operator_integration() {
     assert_eq!(res[0].value, 5);
     assert_eq!(res[1].value, 9);
     assert_eq!(res[2].value, 12);
+}
+
+// --- Backslash / path-separator error ---
+
+#[test]
+fn test_backslash_separator_error() {
+    // A Windows-style path like src\foo\*.rs: the first \f triggers the error.
+    let err = flexiglob::compile_pattern("src\\foo\\*.rs").unwrap_err();
+    assert!(matches!(err.kind, ParseErrorKind::InvalidEscape('f')));
+    assert!(err.span == (3..5)); // '\' at byte 3, 'f' at byte 4
+    assert!(err.message.contains('/'), "message should mention '/' as the correct separator");
+
+    // Same pattern but the backslash precedes a non-alphanumeric non-special char.
+    let err2 = flexiglob::compile_pattern("foo\\^bar").unwrap_err();
+    assert!(matches!(err2.kind, ParseErrorKind::InvalidEscape('^')));
+    assert!(!err2.message.contains('/'), "non-path char should get generic message");
+
+    // Invalid escape inside a bracket set.
+    let err3 = flexiglob::compile_pattern("[a\\bc]").unwrap_err();
+    assert!(matches!(err3.kind, ParseErrorKind::InvalidEscape('b')));
+    assert!(err3.message.contains('/'));
+
+    // Valid escapes are still accepted.
+    assert!(flexiglob::compile_pattern("foo\\*bar").is_ok());
+    assert!(flexiglob::compile_pattern("foo\\?bar").is_ok());
+    assert!(flexiglob::compile_pattern("foo\\\\bar").is_ok());
+    assert!(flexiglob::compile_pattern("[a\\]b]").is_ok());
 }
 
 // --- Filesystem feature ---

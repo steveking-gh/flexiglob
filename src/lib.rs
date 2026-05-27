@@ -58,6 +58,8 @@ pub enum ParseErrorKind {
     UnterminatedBracketSet,
     EmptyBrackets,
     UnexpectedTrailingCharacters,
+    /// The character after a backslash is not a recognized escapable character.
+    InvalidEscape(char),
 }
 
 /// Syntax error information pointing to the exact locations inside the pattern.
@@ -81,6 +83,10 @@ impl core::fmt::Display for ParseError {
 
 impl core::error::Error for ParseError {}
 
+/// Characters that may follow a backslash escape in a flexiglob pattern.
+/// Everything else is either a path separator (use `/`) or needs no escaping.
+const GLOB_ESCAPABLE: &[char] = &['*', '?', '[', ']', '(', ')', '"', '\\'];
+
 /// Compiles a raw wildcard pattern string into compiled match tokens.
 pub fn compile_pattern(pattern: &str) -> Result<Vec<MatchToken>, ParseError> {
     let mut tokens = Vec::new();
@@ -93,7 +99,20 @@ pub fn compile_pattern(pattern: &str) -> Result<Vec<MatchToken>, ParseError> {
         match ch {
             '\\' => {
                 if i + 1 < chars.len() {
-                    tokens.push(MatchToken::Char(chars[i + 1].1));
+                    let (next_byte_pos, next_ch) = chars[i + 1];
+                    if !GLOB_ESCAPABLE.contains(&next_ch) {
+                        let message = if next_ch.is_alphanumeric() || matches!(next_ch, '.' | '_') {
+                            "Backslash is the escape character; use '/' as the path separator in flexiglob patterns".to_string()
+                        } else {
+                            format!("'\\{}' is not a recognized escape sequence", next_ch)
+                        };
+                        return Err(ParseError {
+                            kind: ParseErrorKind::InvalidEscape(next_ch),
+                            span: byte_pos..next_byte_pos + next_ch.len_utf8(),
+                            message,
+                        });
+                    }
+                    tokens.push(MatchToken::Char(next_ch));
                     // +2 skips the escaped character; +1 would re-examine it
                     // as a potential wildcard on the next iteration.
                     i += 2;
@@ -138,7 +157,20 @@ pub fn compile_pattern(pattern: &str) -> Result<Vec<MatchToken>, ParseError> {
                     }
                     if cur_ch == '\\' {
                         if i + 1 < chars.len() {
-                            set.insert(chars[i + 1].1);
+                            let (next_byte_pos, next_ch) = chars[i + 1];
+                            if !GLOB_ESCAPABLE.contains(&next_ch) {
+                                let message = if next_ch.is_alphanumeric() || matches!(next_ch, '.' | '_') {
+                                    "Backslash is the escape character; use '/' as the path separator in flexiglob patterns".to_string()
+                                } else {
+                                    format!("'\\{}' is not a recognized escape sequence", next_ch)
+                                };
+                                return Err(ParseError {
+                                    kind: ParseErrorKind::InvalidEscape(next_ch),
+                                    span: chars[i].0..next_byte_pos + next_ch.len_utf8(),
+                                    message,
+                                });
+                            }
+                            set.insert(next_ch);
                             i += 2;
                         } else {
                             return Err(ParseError {
@@ -263,20 +295,20 @@ pub fn wildcard_match(tokens: &[MatchToken], candidate: &str) -> bool {
                 MatchToken::Char(ch) if c == *ch => {
                     next[i + 1] = true;
                 }
-                MatchToken::AnyChar if c != '/' && c != '\\' => {
+                MatchToken::AnyChar if c != '/' => {
                     next[i + 1] = true;
                 }
                 MatchToken::Set(set) if set.contains(&c) => {
                     next[i + 1] = true;
                 }
-                MatchToken::NegatedSet(set) if c != '/' && c != '\\' && !set.contains(&c) => {
+                MatchToken::NegatedSet(set) if c != '/' && !set.contains(&c) => {
                     next[i + 1] = true;
                 }
                 // Self-loop: wildcard consumes c and stays at i, allowing
                 // further characters to match.  epsilon_close below adds
                 // i+1, covering the case where the wildcard matches nothing
                 // further after this character.
-                MatchToken::AnySeqNoSeparator if c != '/' && c != '\\' => {
+                MatchToken::AnySeqNoSeparator if c != '/' => {
                     next[i] = true;
                 }
                 MatchToken::AnySeq => {
@@ -295,7 +327,7 @@ pub fn wildcard_match(tokens: &[MatchToken], candidate: &str) -> bool {
 }
 
 fn is_separator_token(tok: &MatchToken) -> bool {
-    matches!(tok, MatchToken::Char('/') | MatchToken::Char('\\'))
+    matches!(tok, MatchToken::Char('/'))
 }
 
 /// Propagates epsilon (zero-width) transitions forward through `active`.
@@ -678,7 +710,7 @@ impl<'a, T> Globber<'a, T> {
     /// src/parser/*.rs          "src/parser/"         false      false
     /// src/parser/ast.rs        "src/parser/ast.rs"   false      true
     /// .text*                   ""                    false      false
-    /// src/foo\*.rs             "src/"                false      true
+    /// src/foo\*.rs             "src/foo\*.rs"        false      true
     /// SORT_SIZE(src/**/*.rs)   "src/"                true       false
     /// ```
     ///
@@ -983,7 +1015,7 @@ mod tests {
         let tok_question = compile_pattern("a?b").unwrap();
         assert!(wildcard_match(&tok_question, "axb"));
         assert!(!wildcard_match(&tok_question, "a/b"));
-        assert!(!wildcard_match(&tok_question, "a\\b"));
+        assert!(wildcard_match(&tok_question, "a\\b")); // '/' is the only separator; '\' is an ordinary char in candidates
 
         // Test complex nested matching with stack backtracking
         let tok_complex = compile_pattern("**/a/*").unwrap();
