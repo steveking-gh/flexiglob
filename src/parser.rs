@@ -59,6 +59,8 @@ pub enum MatchToken {
 pub enum ParseErrorKind {
     EmptyPattern,
     InvalidOperator(String),
+    /// An operator with this name was already registered in the builder.
+    DuplicateOperator(String),
     MismatchedParentheses,
     UnexpectedParen,
     UnterminatedBracketSet,

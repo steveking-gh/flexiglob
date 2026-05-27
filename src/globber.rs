@@ -13,7 +13,7 @@ use alloc::vec::Vec;
 
 use crate::matcher::wildcard_match;
 use crate::operator::GlobOperator;
-use crate::parser::{MatchToken, ParsedPattern, ParseError};
+use crate::parser::{MatchToken, ParsedPattern, ParseError, ParseErrorKind};
 
 /// Filesystem traversal hint produced by [`Globber::scan_hint`].
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,14 +55,30 @@ impl<'a, T> GlobberBuilder<'a, T> {
     }
 
     /// Builder-style custom operator registration.
+    ///
+    /// Panics if an operator with the same name is already registered.
+    /// Use [`register_operator`](Self::register_operator) for dynamic registration
+    /// where a `Result` is preferable to a panic.
     pub fn with_operator(mut self, op: impl GlobOperator<T> + 'a) -> Self {
-        self.register_operator(op);
+        self.register_operator(op)
+            .expect("operator name already registered");
         self
     }
 
     /// Registers a custom pipeline operator.
-    pub fn register_operator(&mut self, op: impl GlobOperator<T> + 'a) {
-        self.operators.insert(op.name().to_string(), Box::new(op));
+    ///
+    /// Returns `Err` if an operator with the same name is already registered.
+    pub fn register_operator(&mut self, op: impl GlobOperator<T> + 'a) -> Result<(), ParseError> {
+        let name = op.name().to_string();
+        if self.operators.contains_key(&name) {
+            return Err(ParseError {
+                kind: ParseErrorKind::DuplicateOperator(name.clone()),
+                span: 0..0,
+                message: alloc::format!("operator '{}' is already registered", name),
+            });
+        }
+        self.operators.insert(name, Box::new(op));
+        Ok(())
     }
 
     /// Compiles a pattern string and validates that any nested operator name is registered.

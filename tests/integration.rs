@@ -386,6 +386,32 @@ fn test_inline_closure_operator_integration() {
     assert_eq!(res[2].value, 12);
 }
 
+// --- Operator name collision ---
+
+#[test]
+fn test_duplicate_operator_name() {
+    // with_operator panics on a duplicate name
+    let result = std::panic::catch_unwind(|| {
+        GlobberBuilder::<String>::new()
+            .with_operator(ReverseOp)
+            .with_operator(ReverseOp)
+    });
+    assert!(result.is_err(), "expected panic on duplicate operator name");
+
+    // register_operator returns Err on a duplicate name
+    let mut builder = GlobberBuilder::<String>::new();
+    assert!(builder.register_operator(ReverseOp).is_ok());
+    let err = builder.register_operator(ReverseOp).unwrap_err();
+    assert!(matches!(err.kind, ParseErrorKind::DuplicateOperator(ref name) if name == "REVERSE"));
+    assert!(err.message.contains("REVERSE"));
+
+    // The first registration is still intact after the failed second one
+    let globber = builder.compile("REVERSE(*.rs)").unwrap();
+    let candidates = ["lib.rs".to_string(), "main.rs".to_string()];
+    let result = globber.run(&candidates, |s| s.as_str());
+    assert_eq!(result, vec![&"main.rs".to_string(), &"lib.rs".to_string()]);
+}
+
 // --- Backslash / path-separator error ---
 
 #[test]
