@@ -1,0 +1,30 @@
+Cargo.toml
+  h_5b3f31968f5853 7
+  s_d6fcdb343debe9::t_6449d4b0d8868a 5-6,8-13
+  s_d6fcdb343debe9::t_215e0ca12f6663 14
+src/globber.rs
+  s_d6fcdb343debe9::t_4d64d9cccb464f 157
+README.md
+  s_d6fcdb343debe9::t_9ab5593eaa4660 250
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "cad3c80b9075209c00ac05d0f521fa27531bab87",
+  "prompts": {},
+  "humans": {
+    "h_5b3f31968f5853": {
+      "author": "Steve King <12994437+steveking-gh@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_d6fcdb343debe9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dec03545-7018-4a5d-8218-bed3f5c31f31",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Steve King <12994437+steveking-gh@users.noreply.github.com>"
+    }
+  }
+}
