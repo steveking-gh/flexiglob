@@ -1,0 +1,28 @@
+tests/integration.rs
+  s_d6fcdb343debe9::t_d5aaecd9e948cb 196-199
+src/globber.rs
+  h_5b3f31968f5853 141
+README.md
+  h_5b3f31968f5853 251
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "42b362456e6d2411d0c047669c72bdc0e489c19a",
+  "prompts": {},
+  "humans": {
+    "h_5b3f31968f5853": {
+      "author": "Steve King <12994437+steveking-gh@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_d6fcdb343debe9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dec03545-7018-4a5d-8218-bed3f5c31f31",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Steve King <12994437+steveking-gh@users.noreply.github.com>"
+    }
+  }
+}
