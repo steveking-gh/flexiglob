@@ -382,6 +382,71 @@ fn test_inline_closure_operator_integration() {
     assert_eq!(res[2].value, 12);
 }
 
+// --- Filesystem feature ---
+
+#[cfg(feature = "fs")]
+mod fs_tests {
+    use flexiglob::GlobberBuilder;
+
+    #[test]
+    fn test_run_fs_literal() {
+        let builder = GlobberBuilder::<String>::new();
+        let globber = builder.compile("src/lib.rs").unwrap();
+        let results = globber.run_fs();
+        assert_eq!(results, vec!["src/lib.rs"]);
+    }
+
+    #[test]
+    fn test_run_fs_flat() {
+        let builder = GlobberBuilder::<String>::new();
+        let globber = builder.compile("src/*.rs").unwrap();
+        let results = globber.run_fs();
+        assert!(results.contains(&"src/lib.rs".to_string()));
+        for r in &results {
+            assert!(r.ends_with(".rs"), "unexpected file: {r}");
+            assert_eq!(r.matches('/').count(), 1, "should not be nested: {r}");
+        }
+    }
+
+    #[test]
+    fn test_run_fs_recursive() {
+        let builder = GlobberBuilder::<String>::new();
+        let globber = builder.compile("src/**/*.rs").unwrap();
+        let results = globber.run_fs();
+        assert!(results.contains(&"src/lib.rs".to_string()));
+        for r in &results {
+            assert!(r.ends_with(".rs"), "unexpected file: {r}");
+            assert!(r.starts_with("src/"), "should be under src/: {r}");
+        }
+    }
+
+    #[test]
+    fn test_run_fs_no_match() {
+        let builder = GlobberBuilder::<String>::new();
+        let globber = builder.compile("src/*.xyz").unwrap();
+        let results = globber.run_fs();
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_run_fs_nonexistent_root() {
+        let builder = GlobberBuilder::<String>::new();
+        let globber = builder.compile("nonexistent_dir/*.rs").unwrap();
+        let results = globber.run_fs();
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_run_fs_nonexistent_literal() {
+        // Literal paths are returned as-is so the caller's fs::open gets a
+        // precise OS error rather than a silent empty result.
+        let builder = GlobberBuilder::<String>::new();
+        let globber = builder.compile("src/nonexistent.rs").unwrap();
+        let results = globber.run_fs();
+        assert_eq!(results, vec!["src/nonexistent.rs"]);
+    }
+}
+
 // --- Empty bracket set ---
 
 #[test]
