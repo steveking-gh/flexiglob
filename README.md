@@ -207,11 +207,39 @@ pub struct ReverseOp;
 
 impl<T> GlobOperator<T> for ReverseOp {
     fn name(&self) -> &str { "REVERSE" }
-    fn apply(&self, candidates: &mut Vec<T>) {
+    fn apply(&self, candidates: &mut Vec<&T>) {
         candidates.reverse();
     }
 }
 ```
+
+---
+
+## Filesystem Traversal Hints
+
+Users can optionally call `scan_hint()` on a compiled `Globber` to aid in
+building the input set.
+
+    let hint = globber.scan_hint();
+
+For example, when matching a set of files, the `root`
+indicates the base path to the relevant files before the first wildcard.
+
+The members of `scan_hint` result are as follows:
+
+- `root` - Deepest static prefix before the first wildcard, typically used for
+  file system globs.
+- `is_recursive` - true if the pattern contains ** and needs recursive traversal
+  for file system globs.
+- `is_literal` - true if the pattern contains no wildcards at all.
+
+The `scan_hint` `root` result ignores operator wrappers around the wildcard
+string.  For example, the `root` result contains `some/path/` for all of these
+glob strings:
+
+     "some/path/*.elf"
+     "SORT(some/path/*.elf)"
+     "REVERSE(SORT(some/path/*.elf))"
 
 ---
 

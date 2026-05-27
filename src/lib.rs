@@ -512,8 +512,8 @@ impl<T> GlobOperator<T> for ReverseOp {
 }
 
 /// A generic closure-based operator wrapper.
-// for<'a>: the closure is stored now but called later with references whose
-// lifetime is fixed by the caller's candidates slice, so F must work for any 'a.
+// for<'a>: apply() receives references tied to the candidates slice —
+// lifetime unknown at FnOperator construction — F must accept any 'a.
 pub struct FnOperator<T, F>
 where
     F: for<'a> Fn(&mut Vec<&'a T>),
@@ -605,7 +605,10 @@ pub struct ScanHint<'a> {
     /// Static path prefix before the first wildcard — the minimum root to scan.
     pub root: &'a str,
     /// True when the pattern contains `**`, requiring recursive traversal.
-    pub recursive: bool,
+    pub is_recursive: bool,
+    /// True when the pattern contains no wildcards — `root` is an exact path.
+    /// Skip directory traversal and probe with `Path::exists()` directly.
+    pub is_literal: bool,
 }
 
 /// The compiled matching and operator execution engine.
@@ -665,13 +668,14 @@ impl<'a, T> Globber<'a, T> {
     /// to build a complete candidate set for this pattern.
     ///
     /// ```text
-    /// Pattern                  root              recursive
-    /// -------                  ----              ---------
-    /// src/**/*.rs              "src/"            true
-    /// src/parser/*.rs          "src/parser/"     false
-    /// src/parser/ast.rs        "src/parser/ast.rs"  false
-    /// .text*                   ""                false
-    /// SORT_SIZE(src/**/*.rs)   "src/"            true
+    /// Pattern                  root                  recursive  is_literal
+    /// -------                  ----                  ---------  ----------
+    /// src/**/*.rs              "src/"                true       false
+    /// src/parser/*.rs          "src/parser/"         false      false
+    /// src/parser/ast.rs        "src/parser/ast.rs"   false      true
+    /// .text*                   ""                    false      false
+    /// src/foo\*.rs             "src/"                false      true
+    /// SORT_SIZE(src/**/*.rs)   "src/"                true       false
     /// ```
     ///
     /// Operator wrappers are transparent — traversal descends to the leaf.
@@ -700,8 +704,9 @@ impl<'a, T> Globber<'a, T> {
         };
 
         let recursive = tokens.iter().any(|t| matches!(t, MatchToken::AnySeq));
+        let is_literal = tokens.iter().all(|t| matches!(t, MatchToken::Char(_)));
 
-        ScanHint { root, recursive }
+        ScanHint { root, is_recursive: recursive, is_literal }
     }
 
     fn find_leaf(pattern: &ParsedPattern) -> (&str, &[MatchToken]) {

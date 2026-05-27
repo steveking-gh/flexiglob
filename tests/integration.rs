@@ -169,30 +169,34 @@ fn test_scan_hint() {
 
     let builder = GlobberBuilder::<String>::new();
 
-    // ** pattern: recursive, prefix up to last separator
+    // ** pattern: recursive, not literal
     let g = builder.compile("src/**/*.rs").unwrap();
-    assert_eq!(g.scan_hint(), ScanHint { root: "src/", recursive: true });
+    assert_eq!(g.scan_hint(), ScanHint { root: "src/", is_recursive: true, is_literal: false });
 
-    // Single * pattern: not recursive, prefix up to last separator
+    // Single * pattern: not recursive, not literal
     let g2 = builder.compile("src/parser/*.rs").unwrap();
-    assert_eq!(g2.scan_hint(), ScanHint { root: "src/parser/", recursive: false });
+    assert_eq!(g2.scan_hint(), ScanHint { root: "src/parser/", is_recursive: false, is_literal: false });
 
     // No path separator before wildcard
     let g3 = builder.compile(".text*").unwrap();
-    assert_eq!(g3.scan_hint(), ScanHint { root: "", recursive: false });
+    assert_eq!(g3.scan_hint(), ScanHint { root: "", is_recursive: false, is_literal: false });
 
-    // No wildcards: full path, not recursive
+    // No wildcards: full path is the root, is_literal true
     let g4 = builder.compile("src/parser/ast.rs").unwrap();
-    assert_eq!(g4.scan_hint(), ScanHint { root: "src/parser/ast.rs", recursive: false });
+    assert_eq!(g4.scan_hint(), ScanHint { root: "src/parser/ast.rs", is_recursive: false, is_literal: true });
 
-    // Escaped wildcard not counted — real wildcard is later
-    let g5 = builder.compile("src/foo\\*.bar/baz*").unwrap();
-    assert_eq!(g5.scan_hint(), ScanHint { root: "src/foo\\*.bar/", recursive: false });
+    // Escaped wildcard only — compiles to Char tokens, so is_literal true
+    let g5 = builder.compile("src/foo\\*.rs").unwrap();
+    assert_eq!(g5.scan_hint(), ScanHint { root: "src/foo\\*.rs", is_recursive: false, is_literal: true });
+
+    // Escaped wildcard followed by a real wildcard — not literal
+    let g6 = builder.compile("src/foo\\*.bar/baz*").unwrap();
+    assert_eq!(g6.scan_hint(), ScanHint { root: "src/foo\\*.bar/", is_recursive: false, is_literal: false });
 
     // Operator wrapper is transparent
     let builder2 = GlobberBuilder::<String>::new().with_operator(flexiglob::ReverseOp);
-    let g6 = builder2.compile("REVERSE(src/**/*.rs)").unwrap();
-    assert_eq!(g6.scan_hint(), ScanHint { root: "src/", recursive: true });
+    let g7 = builder2.compile("REVERSE(src/**/*.rs)").unwrap();
+    assert_eq!(g7.scan_hint(), ScanHint { root: "src/", is_recursive: true, is_literal: false });
 }
 
 #[test]
