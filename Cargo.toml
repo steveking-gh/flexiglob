@@ -2,6 +2,16 @@
 name = "flexiglob"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.85"
+authors = ["Steve King <sk@metrokings.com>"]
+description = "Flexible wildcard globbing engine with user-definable pipeline operators, no_std compatible"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/steveking-gh/flexiglob"
+homepage = "https://github.com/steveking-gh/flexiglob"
+keywords = ["glob", "wildcard", "pattern-matching", "no-std", "linker"]
+categories = ["parser-implementations", "no-std"]
+exclude = [".claude", "docs", "*.code-workspace"]
 
 [features]
 default = []

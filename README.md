@@ -176,7 +176,6 @@ Flexiglob supports wildcards and escaping rules matching the following syntax:
 | `\(`         | Match a literal `(` character                                   |
 | `\)`         | Match a literal `)` character                                   |
 | `\"`         | Match a literal `"` character                                   |
-| `\"`         | Match a literal `"` character                                   |
 | `\\`         | Match a literal `\` character                                   |
 
 ---
@@ -248,7 +247,7 @@ Examples:
 | src/parser/*.rs        | "src/parser/"       | false        | false      |
 | src/parser/ast.rs      | "src/parser/ast.rs" | false        | true       |
 | .text*                 | ""                  | false        | false      |
-| src/foo\*.rs           | "src/"              | false        | true       |
+| src/foo\*.rs           | "src/"              | false        | false      |
 | SORT_SIZE(src/**/*.rs) | "src/"              | true         | false      |
 
 ---
